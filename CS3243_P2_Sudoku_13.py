@@ -15,7 +15,9 @@ class Sudoku(object):
         state = self.puzzle
         domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
         self.ans = self.backtrack(domains, state)
-        
+        print("ans is")
+        print(self.ans)
+
         # self.ans is a list of lists
         return self.ans
 
@@ -25,12 +27,18 @@ class Sudoku(object):
         if self.is_assignment_complete(state):
             return state
         
+        print("current state")
+        print(state)
+
         variable = self.select_unassigned_variable(state) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
-        for value in self.order_domain_values(domains, state):
+        for value in self.order_domain_values(variable, domains, state):
+            print("value chosen is ")
+            print(value)
             if self.is_value_consistent(value, variable, state):
+                print("pass value consistency check")
                 new_state = copy.deepcopy(state)
                 new_state[row][col] = value
                 new_domains = copy.deepcopy(domains)
@@ -61,12 +69,12 @@ class Sudoku(object):
         # for now, just find any 0 cell
         for row in range(0, 9):
             for col in range(0, 9):
-                if assignment[row][col] == 0:
+                if state[row][col] == 0:
                     return (row, col)
 
     # returns a list of allowable values for the specified variable in the current state
-    def order_domain_values(variable, domains, state):
-        # for now, just return it's domain
+    def order_domain_values(self, variable, domains, state):
+        # for now, just return its domain
         row = variable[0]
         col = variable[1]
         return domains[row][col]
@@ -91,28 +99,29 @@ class Sudoku(object):
     def vertical_all_different(self, column_number, state):
         elements_list = []
         for row in range(0, 9):
-            if row[column_number] != 0:
-                elements_list.append(row[column_number])
+            if state[row][column_number] != 0:
+                elements_list.append(state[row][column_number])
 
         # check for duplicates
-        elements_set = Set(elements_list)
+        elements_set = set(elements_list)
+        print("vert " + str(elements_list) + ":" + str(elements_set))
         return len(elements_list) == len(elements_set)       
 
-    
     # checks horizontal constraint at the specified row_number
     def horizontal_all_different(self, row_number, state):
-        elements_list = filter(lambda number: number != 0 ,state[row_number])
-        
+        elements_list = copy.deepcopy(state[row_number])
+        elements_list = list(filter(lambda number: number != 0, elements_list))
         # check for duplicates
-        elements_set = Set(elements_list)
+        elements_set = set(elements_list)
+        print("hor " + str(elements_list) + ":" + str(elements_set))
         return len(elements_list) == len(elements_set)             
 
     # checks whether all elements in the 3x3 sqaure are different.
     # `position` is a tuple (row, col).
     # This method checks the constraint in the sqaure that contains this position.
     def small_square_all_different(self, position, state):
-        start_row = (position[0] / 3) * 3
-        start_col = (position[1] / 3) * 3
+        start_row = (position[0] // 3) * 3
+        start_col = (position[1] // 3) * 3
         elements_list = []
         for row in range(start_row, start_row + 3):
             for col in range(start_col, start_col + 3):
@@ -120,11 +129,9 @@ class Sudoku(object):
                     elements_list.append(state[row][col])
 
         # check for duplicates
-        elements_set = Set(elements_list)
+        elements_set = set(elements_list)
+        print("small square " + str(len(elements_list)) + ":" + str(len(elements_set)))
         return len(elements_list) == len(elements_set)            
-
-
-
 
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY
