@@ -2,7 +2,7 @@ import sys
 import copy
 
 # Running script: given code can be run with the command:
-# python file.py, ./path/to/init_state.txt ./output/output.txt
+# python file.py ./path/to/init_state.txt ./output/output.txt
 
 class Sudoku(object):
     def __init__(self, puzzle):
@@ -15,9 +15,8 @@ class Sudoku(object):
         state = self.puzzle
         domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
         self.ans = self.backtrack(domains, state)
-        print("ans is")
-        print(self.ans)
-
+        
+        print("ans is " + str(self.ans))
         # self.ans is a list of lists
         return self.ans
 
@@ -26,33 +25,29 @@ class Sudoku(object):
     def backtrack(self, domains, state):
         if self.is_assignment_complete(state):
             return state
-        
-        print("current state")
-        print(state)
 
         variable = self.select_unassigned_variable(state) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
         for value in self.order_domain_values(variable, domains, state):
-            print("value chosen is ")
-            print(value)
             if self.is_value_consistent(value, variable, state):
-                print("pass value consistency check")
                 new_state = copy.deepcopy(state)
                 new_state[row][col] = value
                 new_domains = copy.deepcopy(domains)
                 new_domains[row][col] = [value]
-                # inferences
-                inferences = self.inference(state, variable, value)
-                if inferences == True: # not failure
-                    # add inferences to assignmnet
+                
+                # `inferences` are reduced domains of variables
+                inferences = self.inference(new_domains, variable, value)
+                if inferences != []: # not failure
+                    new_domains = inferences
                     result = self.backtrack(new_domains, new_state)
                     # successful result is a complete assignment
                     # failure is an empty list
                     if result != []: # not failure
                         return result
-            # remove var = value and inferences from assignment (not needed because of deepcopy)
+            # removing assignment {var = value} and inferences from assignment 
+            # is not needed because of `deepcopy`
         return [] # failure           
 
     def is_assignment_complete(self, assignment):
@@ -90,10 +85,58 @@ class Sudoku(object):
             self.horizontal_all_different(row, new_state) and \
             self.small_square_all_different(position, new_state)
 
-    # TODO: Inferences
-    def inference(self, state, variable, value):
-        # TODO: implement this
-        return True
+    def inference(self, domains, variable, value):
+        # Forward Checking for now
+        # can try AC3 in the future
+        return self.forward_checking(domains, variable, value)
+
+    def forward_checking(self, domains, position, value):
+        domains = self.reduce_vertical_cells_domains(domains, position, value)
+        if domains == []:
+            return []
+        domains = self.reduce_horizontal_cells_domains(domains, position, value)
+        if domains == []:
+            return []
+        domains = self.reduce_small_square_domains(domains, position, value)
+        if domains == []:
+            return []
+        else:
+            return domains    
+
+    # remove `value` from all domains of the column of `position`, except at `position` itself
+    def reduce_vertical_cells_domains(self, domains, position, value):
+        row_number = position[0]
+        column_number = position[1]
+        for row in range(0, 9):
+            if row != row_number and value in domains[row][column_number]:
+                domains[row][column_number].remove(value)
+                if domains[row][column_number] == []:
+                    return [] # failure
+        return domains        
+
+    # remove `value` from all domains of the row of `position`, except at `position` itself
+    def reduce_horizontal_cells_domains(self, domains, position, value):
+        row_number = position[0]
+        column_number = position[1]
+        for col in range(0, 9):
+            if col != column_number and value in domains[row_number][col]:
+                domains[row_number][col].remove(value)
+                if domains[row_number][col] == []:
+                    return [] #failure
+        return domains
+
+    # remove `value` from all domains of cells in the 3x3 square containing `position`, 
+    # except at `position` itself
+    def reduce_small_square_domains(self, domains, position, value):
+        start_row = (position[0] // 3) * 3
+        start_col = (position[1] // 3) * 3
+        for row in range(start_row, start_row + 3):
+            for col in range(start_col, start_col + 3):
+                if (not (row, col) == position) and value in domains[row][col]:
+                    domains[row][col].remove(value)
+                    if domains[row][col] == []:
+                        return [] # failure
+        return domains
 
     # checks vertical constraint at the specified column_number
     def vertical_all_different(self, column_number, state):
@@ -104,7 +147,6 @@ class Sudoku(object):
 
         # check for duplicates
         elements_set = set(elements_list)
-        print("vert " + str(elements_list) + ":" + str(elements_set))
         return len(elements_list) == len(elements_set)       
 
     # checks horizontal constraint at the specified row_number
@@ -113,7 +155,6 @@ class Sudoku(object):
         elements_list = list(filter(lambda number: number != 0, elements_list))
         # check for duplicates
         elements_set = set(elements_list)
-        print("hor " + str(elements_list) + ":" + str(elements_set))
         return len(elements_list) == len(elements_set)             
 
     # checks whether all elements in the 3x3 sqaure are different.
@@ -130,7 +171,6 @@ class Sudoku(object):
 
         # check for duplicates
         elements_set = set(elements_list)
-        print("small square " + str(len(elements_list)) + ":" + str(len(elements_set)))
         return len(elements_list) == len(elements_set)            
 
     # you may add more classes/functions if you think is useful
