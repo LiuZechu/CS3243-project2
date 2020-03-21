@@ -16,7 +16,8 @@ class Sudoku(object):
         domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
         self.ans = self.backtrack(domains, state)
         
-        print("ans is " + str(self.ans))
+        # print("ans is " + str(self.ans))
+
         # self.ans is a list of lists
         return self.ans
 
