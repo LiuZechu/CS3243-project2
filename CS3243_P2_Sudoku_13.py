@@ -27,7 +27,9 @@ class Sudoku(object):
         if self.is_assignment_complete(state):
             return state
 
-        variable = self.select_unassigned_variable(state) # variable is a tuple of (row, col)
+        # print(state)
+
+        variable = self.select_unassigned_variable(state, domains) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -61,12 +63,29 @@ class Sudoku(object):
         return is_complete
 
     # returns the coordinate of the unassigned variable
-    def select_unassigned_variable(self, state):
-        # for now, just find any 0 cell
+    def select_unassigned_variable(self, state, domains):
+        # # for now, just find any 0 cell
+        # for row in range(0, 9):
+        #     for col in range(0, 9):
+        #         if state[row][col] == 0:
+        #             return (row, col)
+
+        return self.find_most_constrained_variable(state, domains)
+
+    # returns the unassigned position (row, col) 
+    # that has the fewest allowable values in its domain
+    def find_most_constrained_variable(self, state, domains):
+        # initialise
+        smallest_domain_size = 10
+        position = (0, 0)
+        
         for row in range(0, 9):
             for col in range(0, 9):
-                if state[row][col] == 0:
-                    return (row, col)
+                if (state[row][col] == 0) and (len(domains[row][col]) < smallest_domain_size):
+                    smallest_domain_size = len(domains[row][col])
+                    position = (row, col)
+
+        return position
 
     # returns a list of allowable values for the specified variable in the current state
     def order_domain_values(self, variable, domains, state):
@@ -86,6 +105,8 @@ class Sudoku(object):
             self.horizontal_all_different(row, new_state) and \
             self.small_square_all_different(position, new_state)
 
+    # returns the reduced domains of all variables, where
+    # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
     def inference(self, domains, variable, value):
         # Forward Checking for now
         # can try AC3 in the future
