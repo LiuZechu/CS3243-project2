@@ -5,6 +5,10 @@ import copy
 # python file.py ./path/to/init_state.txt ./output/output.txt
 
 class Sudoku(object):
+    # Constants
+    CSV = "CSV"
+    DEGREE_HEURISTIC = "DEGREE_HEURISTIC"
+
     def __init__(self, puzzle):
         # you may add more attributes if you need
         self.puzzle = puzzle # self.puzzle is a list of lists
@@ -21,6 +25,7 @@ class Sudoku(object):
         # self.ans is a list of lists
         return self.ans
 
+    # TODO: Data structure (linked list?) to store unassigned variables; no need to iterate through entire array to select a variable
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
     # `domains` is a 9x9 2D matrix, where each cell stores an array of allowable values
     def backtrack(self, domains, state):
@@ -29,7 +34,7 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.DEGREE_HEURISTIC) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -63,14 +68,19 @@ class Sudoku(object):
         return is_complete
 
     # returns the coordinate of the unassigned variable
-    def select_unassigned_variable(self, state, domains):
-        # # for now, just find any 0 cell
-        # for row in range(0, 9):
-        #     for col in range(0, 9):
-        #         if state[row][col] == 0:
-        #             return (row, col)
+    def select_unassigned_variable(self, state, domains, heuristic):
+        # defensive programming
+        assert (heuristic == self.CSV) or (heuristic == self.DEGREE_HEURISTIC), \
+            "Only CSV and Degree heuristics are available."
 
-        return self.find_most_constrained_variable(state, domains)
+        # initialise
+        position = (0, 0)
+
+        if heuristic == self.CSV:
+            position = self.find_most_constrained_variable(state, domains)
+        elif heuristic == self.DEGREE_HEURISTIC:
+            position = self.find_most_constraining_variable(state, domains)
+        return position
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
@@ -86,6 +96,62 @@ class Sudoku(object):
                     position = (row, col)
 
         return position
+
+    # returns the unassigned position (row, col) that has the highest degree.
+    # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
+    def find_most_constraining_variable(self, state, domains):
+        # initialise
+        position = (0, 0)
+        max_degree = -1
+
+        for row in range(0, 9):
+            for col in range(0, 9):
+                if (state[row][col] == 0):
+                    current_degree = self.get_degree(state, row, col)
+                    if current_degree > max_degree:
+                        position = (row, col)
+                        max_degree = current_degree
+
+        return position
+
+    def get_degree(self, state, row, col):
+        degree = 0
+
+        for i in range(0, 9):
+            if (i != row) and (state[i][col] == 0):
+                degree += 1
+            if (i != col) and (state[row][i] == 0):
+                degree += 1
+
+        start_row = (row // 3) * 3
+        start_col = (col // 3) * 3
+        for current_row in range(start_row, start_row + 3):
+            for current_col in range(start_col, start_col + 3):
+                if (current_col != col) and (current_row != row) and (state[current_row][current_col] == 0):
+                    degree +=1
+
+        return degree
+
+    # returns a list of allowable values for the specified variable in the current state
+    # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
+    def order_domain_values(self, variable, domains, state):
+        # initialise
+        neighbours = self.get_neighbours(variable) # rows, columns, and small square
+        value_count_tuples = []
+        (row, col) = variable
+        values = domains[row][col]
+
+        for value in values:
+            count = 0
+            for neighbour in neighbours:
+                (n_row, n_col) = neighbour
+                neighbour_domain = domains[n_row][n_col]
+                count += self.count_valid_values(neighbour_domain, value)
+            value_count_tuples.append((value, count))
+
+        sorted_by_count = sorted(value_count_tuples, key = lambda tup: tup[1])
+        result = [value[0] for value in sorted_by_count]
+        return result
 
     def get_neighbours(self, variable):
         neighbours = []
@@ -112,30 +178,6 @@ class Sudoku(object):
             if val != value:
                 count += 1
         return count
-
-    # returns a list of allowable values for the specified variable in the current state
-    # TODO: Delete referenced from: https://github.com/WPI-CS4341/CSP
-    def order_domain_values(self, variable, domains, state):
-        # for now, just return its domain
-        neighbours = self.get_neighbours(variable) # rows, columns, and small square
-        value_count_tuples = []
-        (row, col) = variable
-
-        values = domains[row][col]
-        for value in values:
-            count = 0
-
-            for neighbour in neighbours:
-                (n_row, n_col) = neighbour
-                # print(neighbour)
-                neighbour_domain = domains[n_row][n_col]
-                count += self.count_valid_values(neighbour_domain, value)
-            value_count_tuples.append((value, count))
-            # var.value = null
-
-        sorted_by_count = sorted(value_count_tuples, key = lambda tup: tup[1])
-        result = [value[0] for value in sorted_by_count]
-        return result
 
     # checks whether a variable-value assignment is consistent with the current state
     # position is a tuple (row, col)
