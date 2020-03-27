@@ -87,12 +87,55 @@ class Sudoku(object):
 
         return position
 
+    def get_neighbours(self, variable):
+        neighbours = []
+        (row, col) = variable
+
+        for i in range(0, 9):
+            if i != row:
+                neighbours.append((i, col))
+            if i != col:
+                neighbours.append((row, i))
+
+        start_row = (row // 3) * 3
+        start_col = (col // 3) * 3
+        for current_row in range(start_row, start_row + 3):
+            for current_col in range(start_col, start_col + 3):
+                if current_col != col and current_row != row:
+                    neighbours.append((current_row, current_col))
+
+        return neighbours
+
+    def count_valid_values(self, neighbour_domain, value):
+        count = 0
+        for val in neighbour_domain:
+            if val != value:
+                count += 1
+        return count
+
     # returns a list of allowable values for the specified variable in the current state
+    # TODO: Delete referenced from: https://github.com/WPI-CS4341/CSP
     def order_domain_values(self, variable, domains, state):
         # for now, just return its domain
-        row = variable[0]
-        col = variable[1]
-        return domains[row][col]
+        neighbours = self.get_neighbours(variable) # rows, columns, and small square
+        value_count_tuples = []
+        (row, col) = variable
+
+        values = domains[row][col]
+        for value in values:
+            count = 0
+
+            for neighbour in neighbours:
+                (n_row, n_col) = neighbour
+                # print(neighbour)
+                neighbour_domain = domains[n_row][n_col]
+                count += self.count_valid_values(neighbour_domain, value)
+            value_count_tuples.append((value, count))
+            # var.value = null
+
+        sorted_by_count = sorted(value_count_tuples, key = lambda tup: tup[1])
+        result = [value[0] for value in sorted_by_count]
+        return result
 
     # checks whether a variable-value assignment is consistent with the current state
     # position is a tuple (row, col)
@@ -103,7 +146,7 @@ class Sudoku(object):
         new_state[row][col] = value
         return self.vertical_all_different(col, new_state) and \
             self.horizontal_all_different(row, new_state) and \
-            self.small_square_all_different(position, new_state)
+            self.small_square_all_different(position, new_state) # Can we remove this? First two conditions imply consistency
 
     # returns the reduced domains of all variables, where
     # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
