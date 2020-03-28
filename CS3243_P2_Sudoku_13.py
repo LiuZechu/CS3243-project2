@@ -23,7 +23,7 @@ class Sudoku(object):
         state = self.puzzle
         domains = self.get_initial_domains(state)
         self.ans = self.backtrack(domains, state)
-        # TODO: Catch failure
+        assert(self.ans != [], "Unsolvable")
         
         # print("ans is " + str(self.ans))
 
@@ -38,7 +38,8 @@ class Sudoku(object):
                     initial_domains[row][col] = [state[row][col]]
         return initial_domains
 
-    # TODO: Data structure (linked list?) to store unassigned variables; no need to iterate through entire array to select a variable
+    # TODO: Data structure (set) to store unassigned variables; no need to iterate through entire array to select a variable
+    # I tried but iterating through a set is slower than iterating through a list. Read more here: https://stackoverflow.com/questions/2831212/python-sets-vs-lists
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
     # `domains` is a 9x9 2D matrix, where each cell stores an array of allowable values
     def backtrack(self, domains, state):
@@ -68,9 +69,8 @@ class Sudoku(object):
                     # failure is an empty list
                     if result != []: # not failure
                         return result
-            # Not applicable: removing assignment {var = value} and inferences from assignment
-            # is not needed because of `deepcopy`
-            state[row][col] = 0 # removing assignment
+            # removing inferences from assignment is not needed because of `deepcopy`
+            state[row][col] = 0
         return [] # failure           
 
     def is_assignment_complete(self, assignment):
@@ -109,7 +109,6 @@ class Sudoku(object):
 
         return position
 
-    # TODO: Too slow currently. Intuitively, you solve sudoku using most constrained instead of most constraining.
     # returns the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
     def find_most_constraining_variable(self, state, domains):
