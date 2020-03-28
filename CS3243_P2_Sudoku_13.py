@@ -10,6 +10,8 @@ class Sudoku(object):
     # Constants
     CSV = "CSV"
     DEGREE_HEURISTIC = "DEGREE_HEURISTIC"
+    FORWARD_CHECKING = "FORWARD_CHECKING"
+    AC3 = "AC3"
 
     def __init__(self, puzzle):
         # you may add more attributes if you need
@@ -19,13 +21,21 @@ class Sudoku(object):
     def solve(self):
         # TODO: Write your code here
         state = self.puzzle
-        domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
+        domains = self.get_initial_domains(state)
         self.ans = self.backtrack(domains, state)
         
         # print("ans is " + str(self.ans))
 
         # self.ans is a list of lists
         return self.ans
+
+    def get_initial_domains(self, state):
+        initial_domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
+        for row in range(9):
+            for col in range(9):
+                if state[row][col] != 0:
+                    initial_domains[row][col] = [state[row][col]]
+        return initial_domains
 
     # TODO: Data structure (linked list?) to store unassigned variables; no need to iterate through entire array to select a variable
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
@@ -40,7 +50,7 @@ class Sudoku(object):
         row = variable[0]
         col = variable[1]
 
-        for value in self.order_domain_values(variable, domains, state):
+        for value in self.order_domain_values(variable, domains):
             if self.is_value_consistent(value, variable, state):
                 # Removing deep copy as it is an expensive operation which can be easily resolved
                 # new_state = copy.deepcopy(state)
@@ -49,7 +59,7 @@ class Sudoku(object):
                 new_domains[row][col] = [value]
                 
                 # `inferences` are reduced domains of variables
-                inferences = self.inference(new_domains, variable, value)
+                inferences = self.inference(state, new_domains, variable, value, self.FORWARD_CHECKING)
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
@@ -73,9 +83,6 @@ class Sudoku(object):
 
     # returns the coordinate of the unassigned variable
     def select_unassigned_variable(self, state, domains, heuristic):
-        # defensive programming
-        assert (heuristic == self.CSV) or (heuristic == self.DEGREE_HEURISTIC), \
-            "Only CSV and Degree heuristics are available."
 
         # initialise
         position = (-1, -1)
@@ -153,7 +160,7 @@ class Sudoku(object):
 
     # returns a list of allowable values for the specified variable in the current state
     # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
-    def order_domain_values(self, variable, domains, state):
+    def order_domain_values(self, variable, domains):
         # initialise
         neighbours = self.get_neighbours(variable) # rows, columns, and small square
         value_count_tuples = []
@@ -247,25 +254,44 @@ class Sudoku(object):
 
     # returns the reduced domains of all variables, where
     # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
-    def inference(self, domains, variable, value):
-        # Forward Checking for now
-        # can try AC3 in the future
-        return self.forward_checking(domains, variable, value)
+    def inference(self, state, domains, variable, value, heuristic):
+        # defensive programming
+        assert (heuristic == self.AC3) or (heuristic == self.FORWARD_CHECKING), \
+            "Only AC3 and Forward Checking heuristics are available."
+
+        if heuristic == self.AC3:
+            return self.AC3(state, domains)
+        elif heuristic == self.FORWARD_CHECKING:
+            return self.forward_checking(domains, variable, value)
 
     # TODO: initialise queue in csp
     def AC3(self, state, domains):
+        # initialisation
         queue = Queue()
+
+        # TODO: Check position of state directly ?
+        unassigned_positions = self.get_unassigned_positions(state)
+        for position in unassigned_positions:
+            neighbours = self.get_neighbours(position)
+            for neighbour in neighbours:
+                queue.put((position, neighbour))
+        # for X in unassigned_positions:
+        #     for Y in unassigned_positions:
+        #         if X != Y:
+        #             queue.put((X, Y))
 
         while not queue.empty():
             (X, Y) = queue.get()
             if self.revise(domains, X, Y):
-                if len(domains[X[0]][X[1]] == 0): return False
-                # Consider using get_unassigned_neighbours instead
-                for Z in (self.get_neighbours(X).remove(Y)):
+                if len(domains[X[0]][X[1]]) == 0: return []
+                neighbours = self.get_neighbours(X)
+                neighbours.remove(Y)
+                for Z in neighbours:
                     queue.put((Z, X))
-        return True
+        return domains
 
 
+    # revises domain of X; domain is mutated.
     def revise(self, domains, X, Y):
         revised = False
         for x in domains[X[0]][X[1]]:
@@ -332,6 +358,14 @@ class Sudoku(object):
         start_col = (col // 3) * 3
 
         return start_row, start_col
+
+    def get_unassigned_positions(self, state):
+        unassigned_positions = []
+        for row in range(9):
+            for col in range(9):
+                if state[row][col] == 0:
+                    unassigned_positions.append((row, col))
+        return unassigned_positions
 
     # Index 0 denotes (0,0). 1ndex 3 denotes (3, 0) ... Index 8 denotes (6, 6).
     def get_small_square_index(self, start_row, start_col):
