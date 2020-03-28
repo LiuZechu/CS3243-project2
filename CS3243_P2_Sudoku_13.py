@@ -3,6 +3,8 @@ import copy
 
 # Running script: given code can be run with the command:
 # python file.py ./path/to/init_state.txt ./output/output.txt
+from Queue import Queue
+
 
 class Sudoku(object):
     # Constants
@@ -34,7 +36,7 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.DEGREE_HEURISTIC) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.CSV) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -74,7 +76,7 @@ class Sudoku(object):
             "Only CSV and Degree heuristics are available."
 
         # initialise
-        position = (0, 0)
+        position = (-1, -1)
 
         if heuristic == self.CSV:
             position = self.find_most_constrained_variable(state, domains)
@@ -97,38 +99,53 @@ class Sudoku(object):
 
         return position
 
+    # TODO: Too slow currently. Intuitively, you solve sudoku using most constrained instead of most constraining.
     # returns the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
     def find_most_constraining_variable(self, state, domains):
         # initialise
-        position = (0, 0)
+        position = (-1, -1)
         max_degree = -1
+        zero_positions = self.get_zero_positions(state) # preprocessing step for needed for `get_degree` to run in O(1).
 
-        for row in range(0, 9):
-            for col in range(0, 9):
+        for row in range(9):
+            for col in range(9):
                 if (state[row][col] == 0):
-                    current_degree = self.get_degree(state, row, col)
+                    current_degree = self.get_degree(state, row, col, zero_positions)
                     if current_degree > max_degree:
                         position = (row, col)
                         max_degree = current_degree
 
         return position
 
-    def get_degree(self, state, row, col):
-        degree = 0
+    # returns a 3x9 2D matrix.
+    # The (0,0) element denotes the number of zeros in the first row.
+    # The (1,0) element denotes the number of zeroes in the first column.
+    # The (2,0) element denotes the number of zeroes in the first small square.
+    # There are 9 columns since there are 9 rows/columns/small squares.
+    def get_zero_positions(self, state):
+        zero_positions = self.create_2D_array(3, 9)
 
-        for i in range(0, 9):
-            if (i != row) and (state[i][col] == 0):
-                degree += 1
-            if (i != col) and (state[row][i] == 0):
-                degree += 1
+        for row in range(9):
+            for col in range(9):
+                if (state[row][col] == 0):
+                    zero_positions[0][row] += 1
+                    zero_positions[1][col] += 1
 
-        start_row = (row // 3) * 3
-        start_col = (col // 3) * 3
-        for current_row in range(start_row, start_row + 3):
-            for current_col in range(start_col, start_col + 3):
-                if (current_col != col) and (current_row != row) and (state[current_row][current_col] == 0):
-                    degree +=1
+                    start_row, start_col = self.get_start_row_col(row, col)
+                    small_square_index = self.get_small_square_index(start_row, start_col)
+                    zero_positions[2][small_square_index] += 1
+
+        return zero_positions
+
+
+    def get_degree(self, state, row, col, zero_positions):
+        start_row, start_col = self.get_start_row_col(row, col)
+        small_square_index = self.get_small_square_index(start_row, start_col)
+
+        degree = (zero_positions[0][row] - 1) + \
+                 (zero_positions[1][col] - 1) + \
+                 (zero_positions[2][small_square_index] - 1)  # -1 to account for variable currently being assigned
 
         return degree
 
@@ -153,6 +170,7 @@ class Sudoku(object):
         result = [value[0] for value in sorted_by_count]
         return result
 
+    # returns a list of the variable's neighbours (assigned or not)
     def get_neighbours(self, variable):
         neighbours = []
         (row, col) = variable
@@ -188,7 +206,42 @@ class Sudoku(object):
         new_state[row][col] = value
         return self.vertical_all_different(col, new_state) and \
             self.horizontal_all_different(row, new_state) and \
-            self.small_square_all_different(position, new_state) # Can we remove this? First two conditions imply consistency
+            self.small_square_all_different(position, new_state)
+
+   # checks vertical constraint at the specified column_number
+    def vertical_all_different(self, column_number, state):
+        elements_list = []
+        for row in range(0, 9):
+            if state[row][column_number] != 0:
+                elements_list.append(state[row][column_number])
+
+        # check for duplicates
+        elements_set = set(elements_list)
+        return len(elements_list) == len(elements_set)
+
+    # checks horizontal constraint at the specified row_number
+    def horizontal_all_different(self, row_number, state):
+        elements_list = copy.deepcopy(state[row_number])
+        elements_list = list(filter(lambda number: number != 0, elements_list))
+        # check for duplicates
+        elements_set = set(elements_list)
+        return len(elements_list) == len(elements_set)
+
+    # checks whether all elements in the 3x3 sqaure are different.
+    # `position` is a tuple (row, col).
+    # This method checks the constraint in the sqaure that contains this position.
+    def small_square_all_different(self, position, state):
+        start_row = (position[0] // 3) * 3
+        start_col = (position[1] // 3) * 3
+        elements_list = []
+        for row in range(start_row, start_row + 3):
+            for col in range(start_col, start_col + 3):
+                if state[row][col] != 0:
+                    elements_list.append(state[row][col])
+
+        # check for duplicates
+        elements_set = set(elements_list)
+        return len(elements_list) == len(elements_set)
 
     # returns the reduced domains of all variables, where
     # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
@@ -197,6 +250,29 @@ class Sudoku(object):
         # can try AC3 in the future
         return self.forward_checking(domains, variable, value)
 
+    # TODO: initialise queue in csp
+    def AC3(self, state, domains):
+        queue = Queue()
+
+        while not queue.empty():
+            (X, Y) = queue.get()
+            if self.revise(domains, X, Y):
+                if len(domains[X[0]][X[1]] == 0): return False
+                # Consider using get_assigned_neighbours instead
+                for Z in (self.get_neighbours(X).remove(Y)):
+                    queue.put((Z, X))
+        return True
+
+
+    def revise(self, domains, X, Y):
+        revised = False
+        for x in domains[X[0]][X[1]]:
+            revised = reduce(lambda i, j: i or x != j, domains[Y[0]][Y[1]], False)
+            if revised:
+                domains[X[0]][X[1]].remove(x)
+        return revised
+
+    # TODO: Forward checking should reduce domains of unassigned variables only right?
     def forward_checking(self, domains, position, value):
         domains = self.reduce_vertical_cells_domains(domains, position, value)
         if domains == []:
@@ -208,7 +284,7 @@ class Sudoku(object):
         if domains == []:
             return []
         else:
-            return domains    
+            return domains
 
     # remove `value` from all domains of the column of `position`, except at `position` itself
     def reduce_vertical_cells_domains(self, domains, position, value):
@@ -245,40 +321,19 @@ class Sudoku(object):
                         return [] # failure
         return domains
 
-    # checks vertical constraint at the specified column_number
-    def vertical_all_different(self, column_number, state):
-        elements_list = []
-        for row in range(0, 9):
-            if state[row][column_number] != 0:
-                elements_list.append(state[row][column_number])
+    # UTILS
+    def create_2D_array(self, row, col):
+        return [[0 for x in range(col)] for y in range(row)]
 
-        # check for duplicates
-        elements_set = set(elements_list)
-        return len(elements_list) == len(elements_set)       
+    def get_start_row_col(self, row, col):
+        start_row = (row // 3) * 3
+        start_col = (col // 3) * 3
 
-    # checks horizontal constraint at the specified row_number
-    def horizontal_all_different(self, row_number, state):
-        elements_list = copy.deepcopy(state[row_number])
-        elements_list = list(filter(lambda number: number != 0, elements_list))
-        # check for duplicates
-        elements_set = set(elements_list)
-        return len(elements_list) == len(elements_set)             
+        return start_row, start_col
 
-    # checks whether all elements in the 3x3 sqaure are different.
-    # `position` is a tuple (row, col).
-    # This method checks the constraint in the sqaure that contains this position.
-    def small_square_all_different(self, position, state):
-        start_row = (position[0] // 3) * 3
-        start_col = (position[1] // 3) * 3
-        elements_list = []
-        for row in range(start_row, start_row + 3):
-            for col in range(start_col, start_col + 3):
-                if state[row][col] != 0:
-                    elements_list.append(state[row][col])
-
-        # check for duplicates
-        elements_set = set(elements_list)
-        return len(elements_list) == len(elements_set)            
+    # Index 0 denotes (0,0). 1ndex 3 denotes (3, 0) ... Index 8 denotes (6, 6).
+    def get_small_square_index(self, start_row, start_col):
+        return 3 * (start_row // 3) + start_col // 3
 
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY
