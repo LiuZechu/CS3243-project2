@@ -47,7 +47,7 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.CSV) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.DEGREE_HEURISTIC) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -265,21 +265,15 @@ class Sudoku(object):
         elif heuristic == self.FORWARD_CHECKING:
             return self.forward_checking(domains, variable, value)
 
-    # TODO: initialise queue in csp
     def AC3(self, state, domains):
         # initialisation
         queue = Queue()
 
-        # TODO: Check position of state directly ?
         unassigned_positions = self.get_unassigned_positions(state)
         for position in unassigned_positions:
             neighbours = self.get_neighbours(position)
             for neighbour in neighbours:
                 queue.put((position, neighbour))
-        # for X in unassigned_positions:
-        #     for Y in unassigned_positions:
-        #         if X != Y:
-        #             queue.put((X, Y))
 
         while not queue.empty():
             (X, Y) = queue.get()
