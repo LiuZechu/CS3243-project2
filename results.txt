@@ -4,8 +4,8 @@ MCV, LCS, FC:
 1.65
 0.92
 
-DH, LCS, FC:
-26.29
-4.55
-2.08
-1.0
+MCV, LCS, FC (wo deep copy):
+19.82
+3.58
+1.51
+0.84

@@ -7,3 +7,6 @@ output_test.txt
 # setup
 .idea/
 venv
+
+# Larry's files
+toupdate.txt

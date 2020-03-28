@@ -42,8 +42,9 @@ class Sudoku(object):
 
         for value in self.order_domain_values(variable, domains, state):
             if self.is_value_consistent(value, variable, state):
-                new_state = copy.deepcopy(state)
-                new_state[row][col] = value
+                # Removing deep copy as it is an expensive operation which can be easily resolved
+                # new_state = copy.deepcopy(state)
+                state[row][col] = value # assignment
                 new_domains = copy.deepcopy(domains)
                 new_domains[row][col] = [value]
                 
@@ -51,13 +52,14 @@ class Sudoku(object):
                 inferences = self.inference(new_domains, variable, value)
                 if inferences != []: # not failure
                     new_domains = inferences
-                    result = self.backtrack(new_domains, new_state)
+                    result = self.backtrack(new_domains, state)
                     # successful result is a complete assignment
                     # failure is an empty list
                     if result != []: # not failure
                         return result
-            # removing assignment {var = value} and inferences from assignment 
+            # Not applicable: removing assignment {var = value} and inferences from assignment
             # is not needed because of `deepcopy`
+            state[row][col] = 0 # removing assignment
         return [] # failure           
 
     def is_assignment_complete(self, assignment):
@@ -106,12 +108,12 @@ class Sudoku(object):
         # initialise
         position = (-1, -1)
         max_degree = -1
-        zero_positions = self.get_zero_positions(state) # preprocessing step for needed for `get_degree` to run in O(1).
+        zeros_table = self.get_zeros_table(state) # preprocessing step for needed for `get_degree` to run in O(1).
 
         for row in range(9):
             for col in range(9):
                 if (state[row][col] == 0):
-                    current_degree = self.get_degree(state, row, col, zero_positions)
+                    current_degree = self.get_degree(row, col, zeros_table)
                     if current_degree > max_degree:
                         position = (row, col)
                         max_degree = current_degree
@@ -123,29 +125,29 @@ class Sudoku(object):
     # The (1,0) element denotes the number of zeroes in the first column.
     # The (2,0) element denotes the number of zeroes in the first small square.
     # There are 9 columns since there are 9 rows/columns/small squares.
-    def get_zero_positions(self, state):
-        zero_positions = self.create_2D_array(3, 9)
+    def get_zeros_table(self, state):
+        zeros_table = self.create_2D_array(3, 9)
 
         for row in range(9):
             for col in range(9):
                 if (state[row][col] == 0):
-                    zero_positions[0][row] += 1
-                    zero_positions[1][col] += 1
+                    zeros_table[0][row] += 1
+                    zeros_table[1][col] += 1
 
                     start_row, start_col = self.get_start_row_col(row, col)
                     small_square_index = self.get_small_square_index(start_row, start_col)
-                    zero_positions[2][small_square_index] += 1
+                    zeros_table[2][small_square_index] += 1
 
-        return zero_positions
+        return zeros_table
 
 
-    def get_degree(self, state, row, col, zero_positions):
+    def get_degree(self, row, col, zeros_table):
         start_row, start_col = self.get_start_row_col(row, col)
         small_square_index = self.get_small_square_index(start_row, start_col)
 
-        degree = (zero_positions[0][row] - 1) + \
-                 (zero_positions[1][col] - 1) + \
-                 (zero_positions[2][small_square_index] - 1)  # -1 to account for variable currently being assigned
+        degree = (zeros_table[0][row] - 1) + \
+                 (zeros_table[1][col] - 1) + \
+                 (zeros_table[2][small_square_index] - 1)  # -1 to account for variable currently being assigned
 
         return degree
 
@@ -258,7 +260,7 @@ class Sudoku(object):
             (X, Y) = queue.get()
             if self.revise(domains, X, Y):
                 if len(domains[X[0]][X[1]] == 0): return False
-                # Consider using get_assigned_neighbours instead
+                # Consider using get_unassigned_neighbours instead
                 for Z in (self.get_neighbours(X).remove(Y)):
                     queue.put((Z, X))
         return True
