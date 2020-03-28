@@ -23,6 +23,7 @@ class Sudoku(object):
         state = self.puzzle
         domains = self.get_initial_domains(state)
         self.ans = self.backtrack(domains, state)
+        # TODO: Catch failure
         
         # print("ans is " + str(self.ans))
 
@@ -59,7 +60,7 @@ class Sudoku(object):
                 new_domains[row][col] = [value]
                 
                 # `inferences` are reduced domains of variables
-                inferences = self.inference(state, new_domains, variable, value, self.FORWARD_CHECKING)
+                inferences = self.inference(state, new_domains, variable, value, self.AC3)
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
@@ -295,9 +296,11 @@ class Sudoku(object):
     def revise(self, domains, X, Y):
         revised = False
         for x in domains[X[0]][X[1]]:
-            revised = reduce(lambda i, j: i or x != j, domains[Y[0]][Y[1]], False)
-            if revised:
-                domains[X[0]][X[1]].remove(x)
+            for y in domains[Y[0]][Y[1]]:
+                is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y[0]][Y[1]], False)
+                if not is_satisfied:
+                    domains[X[0]][X[1]].remove(x)
+                    revised = True
         return revised
 
     # TODO: Forward checking should reduce domains of unassigned variables only right?
