@@ -30,6 +30,7 @@ class Sudoku(object):
         # self.ans is a list of lists
         return self.ans
 
+    # excludes assigned variables
     def get_initial_domains(self, state):
         initial_domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
         for row in range(9):
@@ -147,7 +148,8 @@ class Sudoku(object):
 
         return zeros_table
 
-
+    # returns number of unassigned positions that has a binary constraint (rows, cols, square) with the position.
+    # utilises zeros_table to run in O(1)
     def get_degree(self, row, col, zeros_table):
         start_row, start_col = self.get_start_row_col(row, col)
         small_square_index = self.get_small_square_index(start_row, start_col)
@@ -363,6 +365,7 @@ class Sudoku(object):
                     unassigned_positions.append((row, col))
         return unassigned_positions
 
+    # helper function specifically for `zeros_table`
     # Index 0 denotes (0,0). 1ndex 3 denotes (3, 0) ... Index 8 denotes (6, 6).
     def get_small_square_index(self, start_row, start_col):
         return 3 * (start_row // 3) + start_col // 3
