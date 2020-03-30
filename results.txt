@@ -12,6 +12,6 @@ MVC, LCS, AC3:
 
 DH, LCS, AC3:
 Didn't test
-67.82
-0.8
-0.83
+25.21
+0.43
+0.5

@@ -48,7 +48,7 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.CSV) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.DEGREE_HEURISTIC) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -115,49 +115,26 @@ class Sudoku(object):
         # initialise
         position = (-1, -1)
         max_degree = -1
-        zeros_table = self.get_zeros_table(state) # preprocessing step for needed for `get_degree` to run in O(1).
 
         for row in range(9):
             for col in range(9):
                 if (state[row][col] == 0):
-                    current_degree = self.get_degree(row, col, zeros_table)
+                    current_degree = self.get_degree(state, (row, col))
                     if current_degree > max_degree:
                         position = (row, col)
                         max_degree = current_degree
-
         return position
 
-    # returns a 3x9 2D matrix.
-    # The (0,0) element denotes the number of zeros in the first row.
-    # The (1,0) element denotes the number of zeroes in the first column.
-    # The (2,0) element denotes the number of zeroes in the first small square.
-    # There are 9 columns since there are 9 rows/columns/small squares.
-    def get_zeros_table(self, state):
-        zeros_table = self.create_2D_array(3, 9)
+    def get_degree(self, state, variable):
+        return len(self.get_unassigned_neighbours(state, variable))
 
-        for row in range(9):
-            for col in range(9):
-                if (state[row][col] == 0):
-                    zeros_table[0][row] += 1
-                    zeros_table[1][col] += 1
-
-                    start_row, start_col = self.get_start_row_col(row, col)
-                    small_square_index = self.get_small_square_index(start_row, start_col)
-                    zeros_table[2][small_square_index] += 1
-
-        return zeros_table
-
-    # returns number of unassigned positions that has a binary constraint (rows, cols, square) with the position.
-    # utilises zeros_table to run in O(1)
-    def get_degree(self, row, col, zeros_table):
-        start_row, start_col = self.get_start_row_col(row, col)
-        small_square_index = self.get_small_square_index(start_row, start_col)
-
-        degree = (zeros_table[0][row] - 1) + \
-                 (zeros_table[1][col] - 1) + \
-                 (zeros_table[2][small_square_index] - 1)  # -1 to account for variable currently being assigned
-
-        return degree
+    def get_unassigned_neighbours(self, state, variable):
+        unassigned_neighbours = []
+        neighbours = self.get_neighbours(variable)
+        for neighbour in neighbours:
+            if state[neighbour[0]][neighbour[1]] == 0:
+                unassigned_neighbours.append(neighbour)
+        return unassigned_neighbours
 
     # returns a list of allowable values for the specified variable in the current state
     # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
@@ -366,11 +343,6 @@ class Sudoku(object):
                 if state[row][col] == 0:
                     unassigned_positions.append((row, col))
         return unassigned_positions
-
-    # helper function specifically for `zeros_table`
-    # Index 0 denotes (0,0). 1ndex 3 denotes (3, 0) ... Index 8 denotes (6, 6).
-    def get_small_square_index(self, start_row, start_col):
-        return 3 * (start_row // 3) + start_col // 3
 
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY
