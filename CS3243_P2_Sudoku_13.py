@@ -23,7 +23,7 @@ class Sudoku(object):
         state = self.puzzle
         domains = self.get_initial_domains(state)
         self.ans = self.backtrack(domains, state)
-        assert(self.ans != [], "Unsolvable")
+        assert self.ans != [], "Unsolvable"
         
         # print("ans is " + str(self.ans))
 
@@ -39,8 +39,7 @@ class Sudoku(object):
                     initial_domains[row][col] = [state[row][col]]
         return initial_domains
 
-    # TODO: Data structure (set) to store unassigned variables; no need to iterate through entire array to select a variable
-    # I tried but iterating through a set is slower than iterating through a list. Read more here: https://stackoverflow.com/questions/2831212/python-sets-vs-lists
+    # Note: Iterating through a set is slower than iterating through a list. Read more here: https://stackoverflow.com/questions/2831212/python-sets-vs-lists
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
     # `domains` is a 9x9 2D matrix, where each cell stores an array of allowable values
     def backtrack(self, domains, state):
@@ -49,7 +48,7 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.DEGREE_HEURISTIC) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.CSV) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -181,7 +180,7 @@ class Sudoku(object):
         result = [value[0] for value in sorted_by_count]
         return result
 
-    # returns a list of the variable's neighbours (assigned or not)
+    # returns a list of the variable's neighbours (assigned or not).
     def get_neighbours(self, variable):
         neighbours = []
         (row, col) = variable
@@ -196,8 +195,8 @@ class Sudoku(object):
         start_col = (col // 3) * 3
         for current_row in range(start_row, start_row + 3):
             for current_col in range(start_col, start_col + 3):
-                if current_col != col and current_row != row:
-                    neighbours.append((current_row, current_col))
+                if (current_col == col or current_row == row): continue # exclude same row and col
+                else: neighbours.append((current_row, current_col))
 
         return neighbours
 
@@ -274,6 +273,9 @@ class Sudoku(object):
         for position in unassigned_positions:
             neighbours = self.get_neighbours(position)
             for neighbour in neighbours:
+                # Notice that neighbour (ie Y) can be assigned variable.
+                # This assignment works because `revise(X,Y)` will revise the domain X
+                # such that it satisfies the domain of Y (which has only one value - the assigned value).
                 queue.put((position, neighbour))
 
         while not queue.empty():
