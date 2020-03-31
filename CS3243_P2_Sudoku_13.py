@@ -151,6 +151,8 @@ class Sudoku(object):
                 (n_row, n_col) = neighbour
                 neighbour_domain = domains[n_row][n_col]
                 count += self.count_valid_values(neighbour_domain, value)
+                # TODO: LCV runs MUCH slower than most constraining value. Nani?
+                # count += neighbour_domain.count(value)  # if neighbour domain contains value, the variable has a constrain on this neighbour
             value_count_tuples.append((value, count))
 
         sorted_by_count = sorted(value_count_tuples, key = lambda tup: tup[1])
