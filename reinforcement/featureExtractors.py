@@ -110,7 +110,10 @@ class NewExtractor(FeatureExtractor):
     - how far away the next food is
     - whether a ghost collision is imminent
     - whether a ghost is one step away
+    
     - whether a ghost is currently afraid of Pacman
+    - whether there's a capsule near you
+    - whether a ghost is 2 steps away
 
     """
     def getFeatures(self, state, action):
