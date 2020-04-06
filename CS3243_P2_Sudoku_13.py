@@ -26,9 +26,9 @@ class Sudoku(object):
         # TODO: Write your code here
         state = self.puzzle
         domains = self.get_initial_domains(state)
-        # old_domains = copy.deepcopy(domains)
         # TODO: Why does preprocessing AC3 cause the number of times backtracing is called to increase from 90 to 2316?
-        # domains = self.AC3(state, domains)
+        deque = self.make_arc_deque(self.get_assigned_positions(state))
+        domains = self.arc_consistency(deque, domains)
         # debug = self.debug_arrays(old_domains, domains)
         self.ans = self.backtrack(domains, state)
 
@@ -44,7 +44,6 @@ class Sudoku(object):
     def get_initial_domains(self, state):
         initial_domains = {}
 
-        # initial_domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
         for row in range(9):
             for col in range(9):
                 value = state[row][col]
@@ -54,6 +53,18 @@ class Sudoku(object):
                 else:
                     initial_domains[(row, col)] = set([value])
         return initial_domains
+
+    def get_assigned_positions(self, state):
+        assigned_positions = []
+
+        for row in range(9):
+            for col in range(9):
+                position = (row, col)
+                value = state[row][col]
+                if value != 0:
+                    assigned_positions.append(position)
+
+        return assigned_positions
 
     # Note: Iterating through a set is slower than iterating through a list. Read more here: https://stackoverflow.com/questions/2831212/python-sets-vs-lists
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
@@ -82,7 +93,7 @@ class Sudoku(object):
                 # new_domains[(row, col)] = [value]
                 
                 # `inferences` are reduced domains of variables
-                inferences = self.inference(state, domains, variable, value, removed, self.AC3)
+                inferences = self.inference(domains, variable, value, removed, self.AC3)
                 # if self.counter == 12:
                 #     print("Variable chosen: {}".format(variable))
                 #     print("Value chosen: {}".format(value))
@@ -199,11 +210,9 @@ class Sudoku(object):
         for value in values:
             count = 0
             for neighbour in neighbours:
-                (n_row, n_col) = neighbour
-                neighbour_domain = domains[(n_row, n_col)]
-                count += self.count_valid_values(neighbour_domain, value)
-                # TODO: LCV runs MUCH slower than most constraining value. Nani?
-                # count += neighbour_domain.count(value)  # if neighbour domain contains value, the variable has a constrain on this neighbour
+                if value in domains[neighbour]:
+                    count += 1
+                # count += self.count_valid_values(neighbour_domain, value)
             value_count_tuples.append((value, count))
 
         sorted_by_count = sorted(value_count_tuples, key=lambda tup: tup[1])
@@ -285,36 +294,17 @@ class Sudoku(object):
 
     # returns the reduced domains of all variables, where
     # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
-    def inference(self, state, domains, variable, value, removed, heuristic):
+    def inference(self, domains, variable, value, removed, heuristic):
         # defensive programming
         assert (heuristic == self.AC3) or (heuristic == self.FORWARD_CHECKING), \
             "Only AC3 and Forward Checking heuristics are available."
 
         if heuristic == self.AC3:
-            return self.arc_consistency(state, domains, removed)
+            return self.arc_consistency(self.make_arc_deque([variable]), domains, removed)
         elif heuristic == self.FORWARD_CHECKING:
             return self.forward_checking(domains, variable, value)
 
-    def arc_consistency(self, state, domains, removed):
-        # initialisation
-        deque = collections.deque()
-
-        # for i in range(9):
-        #     for j in range(9):
-        #         position = (i, j)
-        #         neighbours = self.get_neighbours(position)
-        #         for neighbour in neighbours:
-        #             deque.append((position, neighbour))
-
-        unassigned_positions = self.get_unassigned_positions(state)
-        for position in unassigned_positions:
-            neighbours = self.get_neighbours(position)
-            for neighbour in neighbours:
-                # Notice that neighbour (ie Y) can be assigned variable.
-                # This assignment works because `revise(X,Y)` will revise the domain X
-                # such that it satisfies the domain of Y (which has only one value - the assigned value).
-                deque.append((position, neighbour))
-
+    def arc_consistency(self, deque, domains, removed = defaultdict(set)):
         while deque: # true if not empty
             (X, Y) = deque.popleft()
             if self.revise(domains, X, Y, removed):
@@ -325,6 +315,18 @@ class Sudoku(object):
                     deque.append((Z, X))
         return domains
 
+    # Important: The only constraints relevant are the ones FROM the assigned variables to its neighbours
+    # (ie the neighbour's domain will be revised). The assigning of the value to a variable will only limit
+    # it's neighbours' domain.
+    # This criteria is not the same as the constraints from unassigned variables to its neighbours.
+    def make_arc_deque(self, assigned_positions):
+        deque = collections.deque()
+
+        for position in assigned_positions:
+            neighbours = self.get_neighbours(position)
+            for neighbour in neighbours:
+                deque.append((neighbour, position))
+        return deque
 
     # revises domain of X; domain is mutated.
     def revise(self, domains, X, Y, removed):
