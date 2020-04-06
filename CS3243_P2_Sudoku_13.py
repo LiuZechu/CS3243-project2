@@ -26,10 +26,8 @@ class Sudoku(object):
         # TODO: Write your code here
         state = self.puzzle
         domains = self.get_initial_domains(state)
-        # TODO: Why does preprocessing AC3 cause the number of times backtracing is called to increase from 90 to 2316?
         deque = self.make_arc_deque(self.get_assigned_positions(state))
         domains = self.arc_consistency(deque, domains)
-        # debug = self.debug_arrays(old_domains, domains)
         self.ans = self.backtrack(domains, state)
 
         print("Backtrack was called {} times".format(self.counter))
@@ -76,11 +74,11 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.MRV) # variable is a tuple of (row, col)
+        variable = self.first_unassigned_variable(state) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
-        for value in self.order_domain_values(variable, domains, self.LCV):
+        for value in self.identity_domain(variable, domains):
             if self.is_value_consistent(value, variable, state):
                 # TODO: remove deep copy?
                 # Removing deep copy as it is an expensive operation which can be easily resolved
@@ -126,16 +124,22 @@ class Sudoku(object):
         return is_complete
 
     # returns the coordinate of the unassigned variable
-    def select_unassigned_variable(self, state, domains, heuristic):
-        if heuristic == self.MRV:
-            return self.find_most_constrained_variable(state, domains)
-        elif heuristic == self.DEGREE_HEURISTIC:
-            return self.find_most_constraining_variable(state, domains)
-        else:
-            for row in range(9):
-                for col in range(9):
-                    if state[row][col] == 0:
-                        return (row, col)
+    # def select_unassigned_variable(self, state, domains, heuristic):
+    #     if heuristic == self.MRV:
+    #         return self.find_most_constrained_variable(state, domains)
+    #     elif heuristic == self.DEGREE_HEURISTIC:
+    #         return self.find_most_constraining_variable(state, domains)
+    #     else:
+    #         for row in range(9):
+    #             for col in range(9):
+    #                 if state[row][col] == 0:
+    #                     return (row, col)
+
+    def first_unassigned_variable(self, state):
+        for row in range(9):
+            for col in range(9):
+                if state[row][col] == 0:
+                    return (row, col)
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
@@ -190,15 +194,21 @@ class Sudoku(object):
 
     # returns a list of allowable values for the specified variable in the current state
     # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
-    def order_domain_values(self, variable, domains, heuristic = None):
+    # def order_domain_values(self, variable, domains, heuristic = None):
+    #
+    #     if heuristic == self.LCV:
+    #         return self.least_constraining_value(variable, domains)
+    #     else:
+    #         # return its domain
+    #         row = variable[0]
+    #         col = variable[1]
+    #         return domains[(row, col)]
 
-        if heuristic == self.LCV:
-            return self.least_constraining_value(variable, domains)
-        else:
-            # return its domain
-            row = variable[0]
-            col = variable[1]
-            return domains[(row, col)]
+    def identity_domain(self, variable, domains):
+        # return its domain
+        row = variable[0]
+        col = variable[1]
+        return domains[(row, col)]
 
     def least_constraining_value(self, variable, domains):
         # initialise
