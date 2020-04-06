@@ -8,10 +8,12 @@ import collections
 
 class Sudoku(object):
     # Constants
-    CSV = "CSV"
+    MRV = "MRV"
     DEGREE_HEURISTIC = "DEGREE_HEURISTIC"
     FORWARD_CHECKING = "FORWARD_CHECKING"
     AC3 = "AC3"
+    LCV = "LCV"
+
     counter = 0
 
     def __init__(self, puzzle):
@@ -23,7 +25,10 @@ class Sudoku(object):
         # TODO: Write your code here
         state = self.puzzle
         domains = self.get_initial_domains(state)
+        # old_domains = copy.deepcopy(domains)
+        # TODO: Why does preprocessing AC3 cause the number of times backtracing is called to increase from 90 to 2316?
         # domains = self.AC3(state, domains)
+        # debug = self.debug_arrays(old_domains, domains)
         self.ans = self.backtrack(domains, state)
 
         print("Backtrack was called {} times".format(self.counter))
@@ -53,11 +58,11 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.CSV) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.MRV) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
-        for value in self.order_domain_values(variable, domains):
+        for value in self.order_domain_values(variable, domains, self.LCV):
             if self.is_value_consistent(value, variable, state):
                 # TODO: remove deep copy?
                 # Removing deep copy as it is an expensive operation which can be easily resolved
@@ -68,7 +73,11 @@ class Sudoku(object):
                 
                 # `inferences` are reduced domains of variables
                 inferences = self.inference(state, new_domains, variable, value, self.AC3)
-                # debug = self.debug_arrays(domains, new_domains)
+                # if self.counter == 12:
+                #     print("Variable chosen: {}".format(variable))
+                #     print("Value chosen: {}".format(value))
+                #     debug = self.debug_arrays(domains, new_domains)
+                #     print("Length of debug: {}".format(len(debug)))
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
@@ -95,11 +104,15 @@ class Sudoku(object):
         # initialise
         position = (-1, -1)
 
-        if heuristic == self.CSV:
-            position = self.find_most_constrained_variable(state, domains)
+        if heuristic == self.MRV:
+            return self.find_most_constrained_variable(state, domains)
         elif heuristic == self.DEGREE_HEURISTIC:
-            position = self.find_most_constraining_variable(state, domains)
-        return position
+            return self.find_most_constraining_variable(state, domains)
+        else:
+            for row in range(9):
+                for col in range(9):
+                    if state[row][col] == 0:
+                        return (row, col)
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
@@ -107,18 +120,27 @@ class Sudoku(object):
         # initialise
         smallest_domain_size = 10
         position = (0, 0)
-        
+
+        # unassigned_positions = self.get_unassigned_positions(state)
+        # for position in unassigned_positions:
+
         for row in range(0, 9):
             for col in range(0, 9):
-                if (state[row][col] == 0) and (len(domains[row][col]) < smallest_domain_size):
-                    smallest_domain_size = len(domains[row][col])
-                    position = (row, col)
-
+                other_position = (row, col)
+                if state[row][col] == 0:
+                    domain_length = len(domains[row][col])
+                    if domain_length < smallest_domain_size:
+                        smallest_domain_size = domain_length
+                        position = other_position
+                    # elif domain_length == smallest_domain_size:
+                    #     # most constraining variable as tie breaker
+                    #     if self.get_degree(state, position) < self.get_degree(state, other_position):
+                    #         position = other_position
         return position
 
     # returns the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
-    def find_most_constraining_variable(self, state, domains):
+    def find_most_constraining_variable(self, state):
         # initialise
         position = (-1, -1)
         max_degree = -1
@@ -145,9 +167,19 @@ class Sudoku(object):
 
     # returns a list of allowable values for the specified variable in the current state
     # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
-    def order_domain_values(self, variable, domains):
+    def order_domain_values(self, variable, domains, heuristic):
+
+        if heuristic == self.LCV:
+            return self.least_constraining_value(variable, domains)
+        else:
+            # return its domain
+            row = variable[0]
+            col = variable[1]
+            return domains[row][col]
+
+    def least_constraining_value(self, variable, domains):
         # initialise
-        neighbours = self.get_neighbours(variable) # rows, columns, and small square
+        neighbours = self.get_neighbours(variable)  # rows, columns, and small square
         value_count_tuples = []
         (row, col) = variable
         values = domains[row][col]
@@ -162,7 +194,7 @@ class Sudoku(object):
                 # count += neighbour_domain.count(value)  # if neighbour domain contains value, the variable has a constrain on this neighbour
             value_count_tuples.append((value, count))
 
-        sorted_by_count = sorted(value_count_tuples, key = lambda tup: tup[1])
+        sorted_by_count = sorted(value_count_tuples, key=lambda tup: tup[1])
         result = [value[0] for value in sorted_by_count]
         return result
 
@@ -254,6 +286,13 @@ class Sudoku(object):
     def AC3(self, state, domains):
         # initialisation
         deque = collections.deque()
+
+        # for i in range(9):
+        #     for j in range(9):
+        #         position = (i, j)
+        #         neighbours = self.get_neighbours(position)
+        #         for neighbour in neighbours:
+        #             deque.append((position, neighbour))
 
         unassigned_positions = self.get_unassigned_positions(state)
         for position in unassigned_positions:
@@ -355,15 +394,15 @@ class Sudoku(object):
     # Returns a list of tuples which specify 1) which cell wherein x and y differs
     # 2) elements of x in the cell and 3) elements of y in the cell.
     # If debug mode is on, prints 1), 2), and 3).
-    def debug_arrays(self, x, y, debug=True):
+    def debug_arrays(self, x, y):
         result = []
         for i in range(9):
             for j in range(9):
                 if x[i][j] != y[i][j]:
-                    if debug:
-                        print("Cell differs at {} {}".format(i, j))
-                        print("Array x: {}".format(x[i][j]))
-                        print("Array y: {}".format(y[i][j]))
+                    # if debug:
+                    #     print("Cell differs at {} {}".format(i, j))
+                    #     print("Array x: {}".format(x[i][j]))
+                    #     print("Array y: {}".format(y[i][j]))
                     result.append(((i, j),
                                    x[i][j],
                                    y[i][j]))
