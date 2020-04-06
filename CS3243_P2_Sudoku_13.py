@@ -41,11 +41,17 @@ class Sudoku(object):
 
     # excludes assigned variables
     def get_initial_domains(self, state):
-        initial_domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
+        initial_domains = {}
+
+        # initial_domains = [[[1,2,3,4,5,6,7,8,9] for i in range(9)] for j in range(9)]
         for row in range(9):
             for col in range(9):
-                if state[row][col] != 0:
-                    initial_domains[row][col] = [state[row][col]]
+                value = state[row][col]
+                if value == 0:
+                    # initial_domains[(row, col)] = [state[row][col]]
+                    initial_domains[(row, col)] = set([1, 2, 3, 4, 5, 6, 7, 8, 9])
+                else:
+                    initial_domains[(row, col)] = set([value])
         return initial_domains
 
     # Note: Iterating through a set is slower than iterating through a list. Read more here: https://stackoverflow.com/questions/2831212/python-sets-vs-lists
@@ -69,7 +75,7 @@ class Sudoku(object):
                 # new_state = copy.deepcopy(state)
                 state[row][col] = value # assignment
                 new_domains = copy.deepcopy(domains)
-                new_domains[row][col] = [value]
+                new_domains[(row, col)] = [value]
                 
                 # `inferences` are reduced domains of variables
                 inferences = self.inference(state, new_domains, variable, value, self.AC3)
@@ -100,10 +106,6 @@ class Sudoku(object):
 
     # returns the coordinate of the unassigned variable
     def select_unassigned_variable(self, state, domains, heuristic):
-
-        # initialise
-        position = (-1, -1)
-
         if heuristic == self.MRV:
             return self.find_most_constrained_variable(state, domains)
         elif heuristic == self.DEGREE_HEURISTIC:
@@ -128,7 +130,7 @@ class Sudoku(object):
             for col in range(0, 9):
                 other_position = (row, col)
                 if state[row][col] == 0:
-                    domain_length = len(domains[row][col])
+                    domain_length = len(domains[(row, col)])
                     if domain_length < smallest_domain_size:
                         smallest_domain_size = domain_length
                         position = other_position
@@ -175,20 +177,20 @@ class Sudoku(object):
             # return its domain
             row = variable[0]
             col = variable[1]
-            return domains[row][col]
+            return domains[(row, col)]
 
     def least_constraining_value(self, variable, domains):
         # initialise
         neighbours = self.get_neighbours(variable)  # rows, columns, and small square
         value_count_tuples = []
         (row, col) = variable
-        values = domains[row][col]
+        values = domains[(row, col)]
 
         for value in values:
             count = 0
             for neighbour in neighbours:
                 (n_row, n_col) = neighbour
-                neighbour_domain = domains[n_row][n_col]
+                neighbour_domain = domains[(n_row, n_col)]
                 count += self.count_valid_values(neighbour_domain, value)
                 # TODO: LCV runs MUCH slower than most constraining value. Nani?
                 # count += neighbour_domain.count(value)  # if neighbour domain contains value, the variable has a constrain on this neighbour
@@ -279,11 +281,11 @@ class Sudoku(object):
             "Only AC3 and Forward Checking heuristics are available."
 
         if heuristic == self.AC3:
-            return self.AC3(state, domains)
+            return self.arc_consistency(state, domains)
         elif heuristic == self.FORWARD_CHECKING:
             return self.forward_checking(domains, variable, value)
 
-    def AC3(self, state, domains):
+    def arc_consistency(self, state, domains):
         # initialisation
         deque = collections.deque()
 
@@ -306,7 +308,7 @@ class Sudoku(object):
         while deque: # true if not empty
             (X, Y) = deque.popleft()
             if self.revise(domains, X, Y):
-                if len(domains[X[0]][X[1]]) == 0: return []
+                if len(domains[(X[0], X[1])]) == 0: return []
                 neighbours = self.get_neighbours(X)
                 neighbours.remove(Y)
                 for Z in neighbours:
@@ -317,12 +319,16 @@ class Sudoku(object):
     # revises domain of X; domain is mutated.
     def revise(self, domains, X, Y):
         revised = False
-        for x in domains[X[0]][X[1]]:
-            for y in domains[Y[0]][Y[1]]:
-                is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y[0]][Y[1]], False)
+        removed = []
+        for x in domains[(X[0], X[1])]:
+            for y in domains[(Y[0], Y[1])]:
+                is_satisfied = reduce(lambda prev, y: prev or x != y, domains[(Y[0], Y[1])], False)
                 if not is_satisfied:
-                    domains[X[0]][X[1]].remove(x)
+                    removed.append(x)
                     revised = True
+
+        for x in removed: # prevent set from changing size during iteration
+            domains[(X[0], X[1])].remove(x)
         return revised
 
     def forward_checking(self, domains, position, value):
@@ -344,8 +350,8 @@ class Sudoku(object):
         column_number = position[1]
         for row in range(0, 9):
             if row != row_number and value in domains[row][column_number]:
-                domains[row][column_number].remove(value)
-                if domains[row][column_number] == []:
+                domains[(row, column_number)].remove(value)
+                if domains[(row, column_number)] == []:
                     return [] # failure
         return domains        
 
@@ -354,9 +360,9 @@ class Sudoku(object):
         row_number = position[0]
         column_number = position[1]
         for col in range(0, 9):
-            if col != column_number and value in domains[row_number][col]:
-                domains[row_number][col].remove(value)
-                if domains[row_number][col] == []:
+            if col != column_number and value in domains[(row_number, col)]:
+                domains[(row_number, col)].remove(value)
+                if domains[(row_number, col)] == []:
                     return [] #failure
         return domains
 
@@ -367,9 +373,9 @@ class Sudoku(object):
         start_col = (position[1] // 3) * 3
         for row in range(start_row, start_row + 3):
             for col in range(start_col, start_col + 3):
-                if (not (row, col) == position) and value in domains[row][col]:
-                    domains[row][col].remove(value)
-                    if domains[row][col] == []:
+                if (not (row, col) == position) and value in domains[(row, col)]:
+                    domains[(row, col)].remove(value)
+                    if domains[(row, col)] == []:
                         return [] # failure
         return domains
 
