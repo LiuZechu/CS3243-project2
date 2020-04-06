@@ -12,6 +12,7 @@ class Sudoku(object):
     DEGREE_HEURISTIC = "DEGREE_HEURISTIC"
     FORWARD_CHECKING = "FORWARD_CHECKING"
     AC3 = "AC3"
+    counter = 0
 
     def __init__(self, puzzle):
         # you may add more attributes if you need
@@ -22,8 +23,10 @@ class Sudoku(object):
         # TODO: Write your code here
         state = self.puzzle
         domains = self.get_initial_domains(state)
-        domains_new = self.AC3(state, domains)
-        self.ans = self.backtrack(domains_new, state)
+        # domains = self.AC3(state, domains)
+        self.ans = self.backtrack(domains, state)
+
+        print("Backtrack was called {} times".format(self.counter))
         assert self.ans != [], "Unsolvable"
         
         # print("ans is " + str(self.ans))
@@ -44,6 +47,7 @@ class Sudoku(object):
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
     # `domains` is a 9x9 2D matrix, where each cell stores an array of allowable values
     def backtrack(self, domains, state):
+        self.counter += 1
         if self.is_assignment_complete(state):
             return state
 
@@ -64,7 +68,7 @@ class Sudoku(object):
                 
                 # `inferences` are reduced domains of variables
                 inferences = self.inference(state, new_domains, variable, value, self.AC3)
-                debug = self.debug_arrays(domains, new_domains)
+                # debug = self.debug_arrays(domains, new_domains)
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
