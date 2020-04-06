@@ -22,7 +22,8 @@ class Sudoku(object):
         # TODO: Write your code here
         state = self.puzzle
         domains = self.get_initial_domains(state)
-        self.ans = self.backtrack(domains, state)
+        domains_new = self.AC3(state, domains)
+        self.ans = self.backtrack(domains_new, state)
         assert self.ans != [], "Unsolvable"
         
         # print("ans is " + str(self.ans))
@@ -54,6 +55,7 @@ class Sudoku(object):
 
         for value in self.order_domain_values(variable, domains):
             if self.is_value_consistent(value, variable, state):
+                # TODO: remove deep copy?
                 # Removing deep copy as it is an expensive operation which can be easily resolved
                 # new_state = copy.deepcopy(state)
                 state[row][col] = value # assignment
@@ -62,6 +64,7 @@ class Sudoku(object):
                 
                 # `inferences` are reduced domains of variables
                 inferences = self.inference(state, new_domains, variable, value, self.AC3)
+                debug = self.debug_arrays(domains, new_domains)
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
@@ -344,6 +347,23 @@ class Sudoku(object):
                 if state[row][col] == 0:
                     unassigned_positions.append((row, col))
         return unassigned_positions
+
+    # Returns a list of tuples which specify 1) which cell wherein x and y differs
+    # 2) elements of x in the cell and 3) elements of y in the cell.
+    # If debug mode is on, prints 1), 2), and 3).
+    def debug_arrays(self, x, y, debug=True):
+        result = []
+        for i in range(9):
+            for j in range(9):
+                if x[i][j] != y[i][j]:
+                    if debug:
+                        print("Cell differs at {} {}".format(i, j))
+                        print("Array x: {}".format(x[i][j]))
+                        print("Array y: {}".format(y[i][j]))
+                    result.append(((i, j),
+                                   x[i][j],
+                                   y[i][j]))
+        return result
 
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY

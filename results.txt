@@ -1,8 +1,21 @@
-MCVariable, MCValue, FC:
+MCV, MCV, FC:
 19.82
 3.58
 1.51
 0.84
+
+MCV, MCV, FC w/ AC3 preprocessing:
+4.34
+0.27
+0.15
+0.17
+
+MCV, LCV, FC:
+22.09
+3.97
+1.52
+0.64
+
 
 MCVariable, MCValue, AC3:
 0.83
