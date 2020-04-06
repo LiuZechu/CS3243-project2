@@ -8,13 +8,6 @@ from collections import defaultdict
 import collections
 
 class Sudoku(object):
-    # Constants
-    MRV = "MRV"
-    DEGREE_HEURISTIC = "DEGREE_HEURISTIC"
-    FORWARD_CHECKING = "FORWARD_CHECKING"
-    AC3 = "AC3"
-    LCV = "LCV"
-
     counter = 0
 
     def __init__(self, puzzle):
@@ -73,7 +66,7 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.first_unassigned_variable(state) # variable is a tuple of (row, col)
+        variable = self.most_constrained_variable() # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -83,16 +76,9 @@ class Sudoku(object):
                 removed = defaultdict(set)
                 original_variable_domain = domains[variable] # cannot add into `removed` as removed is strictly for inference
                 domains[variable] = set([value])
-                # new_domains = copy.deepcopy(domains)
-                # new_domains[(row, col)] = [value]
 
                 # `inferences` are reduced domains of variables
                 inferences = self.arc_consistency(self.make_arc_deque([variable]), domains, removed)
-                # if self.counter == 12:
-                #     print("Variable chosen: {}".format(variable))
-                #     print("Value chosen: {}".format(value))
-                #     debug = self.debug_arrays(domains, new_domains)
-                #     print("Length of debug: {}".format(len(debug)))
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
@@ -119,18 +105,6 @@ class Sudoku(object):
 
         return is_complete
 
-    # returns the coordinate of the unassigned variable
-    # def select_unassigned_variable(self, state, domains, heuristic):
-    #     if heuristic == self.MRV:
-    #         return self.find_most_constrained_variable(state, domains)
-    #     elif heuristic == self.DEGREE_HEURISTIC:
-    #         return self.find_most_constraining_variable(state, domains)
-    #     else:
-    #         for row in range(9):
-    #             for col in range(9):
-    #                 if state[row][col] == 0:
-    #                     return (row, col)
-
     def first_unassigned_variable(self, state):
         for row in range(9):
             for col in range(9):
@@ -139,7 +113,7 @@ class Sudoku(object):
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
-    def find_most_constrained_variable(self, state, domains):
+    def most_constrained_variable(self, state, domains):
         # initialise
         smallest_domain_size = 10
         position = (0, 0)
@@ -163,7 +137,7 @@ class Sudoku(object):
 
     # returns the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
-    def find_most_constraining_variable(self, state):
+    def most_constraining_variable(self, state):
         # initialise
         position = (-1, -1)
         max_degree = -1
@@ -187,18 +161,6 @@ class Sudoku(object):
             if state[neighbour[0]][neighbour[1]] == 0:
                 unassigned_neighbours.append(neighbour)
         return unassigned_neighbours
-
-    # returns a list of allowable values for the specified variable in the current state
-    # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
-    # def order_domain_values(self, variable, domains, heuristic = None):
-    #
-    #     if heuristic == self.LCV:
-    #         return self.least_constraining_value(variable, domains)
-    #     else:
-    #         # return its domain
-    #         row = variable[0]
-    #         col = variable[1]
-    #         return domains[(row, col)]
 
     def identity_domain(self, variable, domains):
         # return its domain
@@ -271,18 +233,6 @@ class Sudoku(object):
                 elif state[current_row][current_col] == value:
                     return False
         return True
-
-    # returns the reduced domains of all variables, where
-    # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
-    def inference(self, domains, variable, value, removed, heuristic):
-        # defensive programming
-        assert (heuristic == self.AC3) or (heuristic == self.FORWARD_CHECKING), \
-            "Only AC3 and Forward Checking heuristics are available."
-
-        if heuristic == self.AC3:
-            return self.arc_consistency(self.make_arc_deque([variable]), domains, removed)
-        elif heuristic == self.FORWARD_CHECKING:
-            return self.forward_checking(domains, variable, value)
 
     def arc_consistency(self, deque, domains, removed = defaultdict(set)):
         while deque: # true if not empty
