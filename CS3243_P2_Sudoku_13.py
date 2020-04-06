@@ -9,16 +9,20 @@ import collections
 
 class Sudoku(object):
     counter = 0
+    adjacency_dict = {}
 
     def __init__(self, puzzle):
         # you may add more attributes if you need
         self.puzzle = puzzle # self.puzzle is a list of lists
-        self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
+        # self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
 
     def solve(self):
         # TODO: Write your code here
         state = self.puzzle
+        self.adjacency_dict = self.get_adjacency_dict(state)
         domains = self.get_initial_domains(state)
+
+        # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state))
         domains = self.arc_consistency(deque, domains)
         self.ans = self.backtrack(domains, state)
@@ -66,7 +70,7 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.most_constrained_variable() # variable is a tuple of (row, col)
+        variable = self.most_constrained_variable(state, domains) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -78,7 +82,8 @@ class Sudoku(object):
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
-                inferences = self.arc_consistency(self.make_arc_deque([variable]), domains, removed)
+                deque = self.make_arc_deque([variable])
+                inferences = self.arc_consistency(deque, domains, removed)
                 if inferences != []: # not failure
                     new_domains = inferences
                     result = self.backtrack(new_domains, state)
@@ -156,7 +161,7 @@ class Sudoku(object):
 
     def get_unassigned_neighbours(self, state, variable):
         unassigned_neighbours = []
-        neighbours = self.get_neighbours(variable)
+        neighbours = self.adjacency_dict[variable]
         for neighbour in neighbours:
             if state[neighbour[0]][neighbour[1]] == 0:
                 unassigned_neighbours.append(neighbour)
@@ -170,10 +175,9 @@ class Sudoku(object):
 
     def least_constraining_value(self, variable, domains):
         # initialise
-        neighbours = self.get_neighbours(variable)  # rows, columns, and small square
+        neighbours = self.adjacency_dict[variable]  # rows, columns, and small square
         value_count_tuples = []
-        (row, col) = variable
-        values = domains[(row, col)]
+        values = domains[variable]
 
         for value in values:
             count = 0
@@ -186,6 +190,18 @@ class Sudoku(object):
         sorted_by_count = sorted(value_count_tuples, key=lambda tup: tup[1])
         result = [value[0] for value in sorted_by_count]
         return result
+
+    # Returns adjacency dictionary of cells (keys) and its neighbours (values)
+    def get_adjacency_dict(self, state):
+        adjacency_dict = defaultdict(list)
+
+        for row in range(9):
+            for col in range(9):
+                position = (row ,col)
+                adjacency_dict[position] = self.get_neighbours(position)
+
+        return adjacency_dict
+
 
     # returns a list of the variable's neighbours (assigned or not).
     def get_neighbours(self, variable):
@@ -239,10 +255,9 @@ class Sudoku(object):
             (X, Y) = deque.popleft()
             if self.revise(domains, X, Y, removed):
                 if len(domains[X]) == 0: return []
-                neighbours = self.get_neighbours(X)
-                neighbours.remove(Y)
+                neighbours = self.adjacency_dict[X]
                 for Z in neighbours:
-                    deque.append((Z, X))
+                    if neighbours != Y: deque.append((Z, X))
         return domains
 
     # Important: The only constraints relevant are the ones FROM the assigned variables to its neighbours
@@ -253,7 +268,7 @@ class Sudoku(object):
         deque = collections.deque()
 
         for position in assigned_positions:
-            neighbours = self.get_neighbours(position)
+            neighbours = self.adjacency_dict[position]
             for neighbour in neighbours:
                 deque.append((neighbour, position))
         return deque
@@ -261,8 +276,6 @@ class Sudoku(object):
     # revises domain of X; domain is mutated.
     def revise(self, domains, X, Y, removed):
         revised = False
-        # removed = [] # dictionary-set
-
         for x in set(domains[X]): # copy domains to prevent set changed size during iteration
             for y in domains[Y]:
                 is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y], False)
@@ -271,8 +284,6 @@ class Sudoku(object):
                     domains[X].remove(x)
                     revised = True
 
-        # for x in removed[X]: # prevent set from changing size during iteration
-        #     domains[X].remove(x)
         return revised
 
     def forward_checking(self, domains, position, value):
@@ -349,10 +360,6 @@ class Sudoku(object):
         for i in range(9):
             for j in range(9):
                 if x[i][j] != y[i][j]:
-                    # if debug:
-                    #     print("Cell differs at {} {}".format(i, j))
-                    #     print("Array x: {}".format(x[i][j]))
-                    #     print("Array y: {}".format(y[i][j]))
                     result.append(((i, j),
                                    x[i][j],
                                    y[i][j]))
