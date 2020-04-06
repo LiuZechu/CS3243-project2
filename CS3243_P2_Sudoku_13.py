@@ -73,7 +73,6 @@ class Sudoku(object):
             return state
 
         # print(state)
-
         variable = self.first_unassigned_variable(state) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
@@ -257,47 +256,21 @@ class Sudoku(object):
     # position is a tuple (row, col)
     def is_value_consistent(self, value, position, state):
         (row, col) = position
-        state[row][col] = value
-        result = self.vertical_all_different(col, state) and \
-            self.horizontal_all_different(row, state) and \
-            self.small_square_all_different(position, state)
-        state[row][col] = 0 # setting value back
-        return result
 
-   # checks vertical constraint at the specified column_number
-    def vertical_all_different(self, column_number, state):
-        elements_list = []
-        for row in range(0, 9):
-            if state[row][column_number] != 0:
-                elements_list.append(state[row][column_number])
+        for i in range(0, 9):
+            if i != row and state[i][col] == value:
+                return False
+            if i != col and state[row][i] == value:
+                return False
 
-        # check for duplicates
-        elements_set = set(elements_list)
-        return len(elements_list) == len(elements_set)
-
-    # checks horizontal constraint at the specified row_number
-    def horizontal_all_different(self, row_number, state):
-        elements_list = copy.deepcopy(state[row_number])
-        elements_list = list(filter(lambda number: number != 0, elements_list))
-        # check for duplicates
-        elements_set = set(elements_list)
-        return len(elements_list) == len(elements_set)
-
-    # checks whether all elements in the 3x3 sqaure are different.
-    # `position` is a tuple (row, col).
-    # This method checks the constraint in the sqaure that contains this position.
-    def small_square_all_different(self, position, state):
-        start_row = (position[0] // 3) * 3
-        start_col = (position[1] // 3) * 3
-        elements_list = []
-        for row in range(start_row, start_row + 3):
-            for col in range(start_col, start_col + 3):
-                if state[row][col] != 0:
-                    elements_list.append(state[row][col])
-
-        # check for duplicates
-        elements_set = set(elements_list)
-        return len(elements_list) == len(elements_set)
+        start_row = (row // 3) * 3
+        start_col = (col // 3) * 3
+        for current_row in range(start_row, start_row + 3):
+            for current_col in range(start_col, start_col + 3):
+                if current_col == col or current_row == row: continue # exclude same row and col
+                elif state[current_row][current_col] == value:
+                    return False
+        return True
 
     # returns the reduced domains of all variables, where
     # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
