@@ -20,17 +20,16 @@ class Sudoku(object):
         # TODO: Write your code here
         state = self.puzzle
         self.adjacency_dict = self.get_adjacency_dict(state)
+        unassigned_positions = self.get_unassigned_positions(state)
         domains = self.get_initial_domains(state)
 
         # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state))
         domains = self.arc_consistency(deque, domains)
-        self.ans = self.backtrack(domains, state)
+        if self.backtrack(state, domains, unassigned_positions):
+            self.ans = self.get_state_from_domain(domains)
 
         print("Backtrack was called {} times".format(self.counter))
-        assert self.ans != [], "Unsolvable"
-        
-        # print("ans is " + str(self.ans))
 
         # self.ans is a list of lists
         return self.ans
@@ -61,16 +60,16 @@ class Sudoku(object):
 
         return assigned_positions
 
-    # Note: Iterating through a set is slower than iterating through a list. Read more here: https://stackoverflow.com/questions/2831212/python-sets-vs-lists
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
-    # `domains` is a 9x9 2D matrix, where each cell stores an array of allowable values
-    def backtrack(self, domains, state):
+    # `domains` is a dictionary. Key is position. Value is a set of allowable sudoku values.
+    def backtrack(self, state, domains, unassigned_positions):
         self.counter += 1
         if self.is_assignment_complete(state):
-            return state
+            return True
 
         # print(state)
-        variable = self.most_constrained_variable(state, domains) # variable is a tuple of (row, col)
+        # variable = unassigned_positions.pop() # variable is a tuple of (row, col)
+        variable = self.first_unassigned_variable(state)
         row = variable[0]
         col = variable[1]
 
@@ -83,10 +82,8 @@ class Sudoku(object):
 
                 # `inferences` are reduced domains of variables
                 deque = self.make_arc_deque([variable])
-                inferences = self.arc_consistency(deque, domains, removed)
-                if inferences != []: # not failure
-                    new_domains = inferences
-                    result = self.backtrack(new_domains, state)
+                if self.arc_consistency(deque, domains, removed) != []: # not failure
+                    result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
                     if result != []: # not failure
@@ -95,11 +92,12 @@ class Sudoku(object):
                 self.restore_removed_domains(domains, removed)
                 domains[variable] = original_variable_domain
             state[row][col] = 0
+        # unassigned_positions.append(variable)
         return [] # failure
 
     def restore_removed_domains(self, domains, removed):
         for position in removed:
-            domains[(position)] |= removed[(position)]
+            domains[position] |= removed[position]
 
     def is_assignment_complete(self, assignment):
         is_complete = True
@@ -348,9 +346,21 @@ class Sudoku(object):
         unassigned_positions = []
         for row in range(9):
             for col in range(9):
+                unassigned_position = (row, col)
                 if state[row][col] == 0:
-                    unassigned_positions.append((row, col))
+                    unassigned_positions.append(unassigned_position)
         return unassigned_positions
+
+    def get_state_from_domain(self, domains):
+        final_state = self.create_2D_array(9, 9)
+
+        for position in domains:
+            (row, col) = position
+            domain = domains[position]
+            assert len(domain) == 1, "size of domain must be 1"
+            final_state[row][col] = domain.pop()
+
+        return final_state
 
     # Returns a list of tuples which specify 1) which cell wherein x and y differs
     # 2) elements of x in the cell and 3) elements of y in the cell.
