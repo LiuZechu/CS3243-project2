@@ -80,18 +80,15 @@ class Sudoku(object):
 
         for value in self.identity_domain(variable, domains):
             if self.is_value_consistent(value, variable, state):
-                # TODO: remove deep copy?
-                # Removing deep copy as it is an expensive operation which can be easily resolved
-                # new_state = copy.deepcopy(state)
                 state[row][col] = value # assignment
                 removed = defaultdict(set)
                 original_variable_domain = domains[variable] # cannot add into `removed` as removed is strictly for inference
                 domains[variable] = set([value])
                 # new_domains = copy.deepcopy(domains)
                 # new_domains[(row, col)] = [value]
-                
+
                 # `inferences` are reduced domains of variables
-                inferences = self.inference(domains, variable, value, removed, self.AC3)
+                inferences = self.arc_consistency(self.make_arc_deque([variable]), domains, removed)
                 # if self.counter == 12:
                 #     print("Variable chosen: {}".format(variable))
                 #     print("Value chosen: {}".format(value))
@@ -258,14 +255,14 @@ class Sudoku(object):
 
     # checks whether a variable-value assignment is consistent with the current state
     # position is a tuple (row, col)
-    def is_value_consistent(self, value, position, current_state):
-        row = position[0]
-        col = position[1]
-        new_state = copy.deepcopy(current_state)
-        new_state[row][col] = value
-        return self.vertical_all_different(col, new_state) and \
-            self.horizontal_all_different(row, new_state) and \
-            self.small_square_all_different(position, new_state)
+    def is_value_consistent(self, value, position, state):
+        (row, col) = position
+        state[row][col] = value
+        result = self.vertical_all_different(col, state) and \
+            self.horizontal_all_different(row, state) and \
+            self.small_square_all_different(position, state)
+        state[row][col] = 0 # setting value back
+        return result
 
    # checks vertical constraint at the specified column_number
     def vertical_all_different(self, column_number, state):
