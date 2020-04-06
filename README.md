@@ -18,4 +18,18 @@ Ivan, Jun Wei, Ze Chu, Larry
    1. AC3
    2. Forward Checking
 
+TODO:
+1. Experiment
+    - Plot time taken against number of empty cells (for randomly generated puzzles)
+    - Histogram (frequency against time)
+2. Variants
+    - at least 2 variants that has justifications
+    - Shift AC3 forward
+    - Clarify most constraining value
+3. Justification for variant
+4. Beat benchmark 
+
 ## Pacman
+TODO
+1. Bug for 1 test case
+2. Feature extractor

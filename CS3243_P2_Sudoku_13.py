@@ -3,8 +3,8 @@ import copy
 
 # Running script: given code can be run with the command:
 # python file.py ./path/to/init_state.txt ./output/output.txt
-from Queue import Queue
 
+import collections
 
 class Sudoku(object):
     # Constants
@@ -48,7 +48,7 @@ class Sudoku(object):
 
         # print(state)
 
-        variable = self.select_unassigned_variable(state, domains, self.DEGREE_HEURISTIC) # variable is a tuple of (row, col)
+        variable = self.select_unassigned_variable(state, domains, self.CSV) # variable is a tuple of (row, col)
         row = variable[0]
         col = variable[1]
 
@@ -246,7 +246,7 @@ class Sudoku(object):
 
     def AC3(self, state, domains):
         # initialisation
-        queue = Queue()
+        deque = collections.deque()
 
         unassigned_positions = self.get_unassigned_positions(state)
         for position in unassigned_positions:
@@ -255,16 +255,16 @@ class Sudoku(object):
                 # Notice that neighbour (ie Y) can be assigned variable.
                 # This assignment works because `revise(X,Y)` will revise the domain X
                 # such that it satisfies the domain of Y (which has only one value - the assigned value).
-                queue.put((position, neighbour))
+                deque.append((position, neighbour))
 
-        while not queue.empty():
-            (X, Y) = queue.get()
+        while deque: # true if not empty
+            (X, Y) = deque.popleft()
             if self.revise(domains, X, Y):
                 if len(domains[X[0]][X[1]]) == 0: return []
                 neighbours = self.get_neighbours(X)
                 neighbours.remove(Y)
                 for Z in neighbours:
-                    queue.put((Z, X))
+                    deque.append((Z, X))
         return domains
 
 
@@ -279,7 +279,6 @@ class Sudoku(object):
                     revised = True
         return revised
 
-    # TODO: Forward checking should reduce domains of unassigned variables only right?
     def forward_checking(self, domains, position, value):
         domains = self.reduce_vertical_cells_domains(domains, position, value)
         if domains == []:
