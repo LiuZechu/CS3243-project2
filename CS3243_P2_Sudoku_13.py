@@ -1,5 +1,6 @@
 import sys
 import copy
+from collections import defaultdict
 
 # Running script: given code can be run with the command:
 # python file.py ./path/to/init_state.txt ./output/output.txt
@@ -74,11 +75,14 @@ class Sudoku(object):
                 # Removing deep copy as it is an expensive operation which can be easily resolved
                 # new_state = copy.deepcopy(state)
                 state[row][col] = value # assignment
-                new_domains = copy.deepcopy(domains)
-                new_domains[(row, col)] = [value]
+                removed = defaultdict(set)
+                original_variable_domain = domains[variable] # cannot add into `removed` as removed is strictly for inference
+                domains[variable] = set([value])
+                # new_domains = copy.deepcopy(domains)
+                # new_domains[(row, col)] = [value]
                 
                 # `inferences` are reduced domains of variables
-                inferences = self.inference(state, new_domains, variable, value, self.AC3)
+                inferences = self.inference(state, domains, variable, value, removed, self.AC3)
                 # if self.counter == 12:
                 #     print("Variable chosen: {}".format(variable))
                 #     print("Value chosen: {}".format(value))
@@ -91,9 +95,15 @@ class Sudoku(object):
                     # failure is an empty list
                     if result != []: # not failure
                         return result
-            # removing inferences from assignment is not needed because of `deepcopy`
+                # restoring inferences
+                self.restore_removed_domains(domains, removed)
+                domains[variable] = original_variable_domain
             state[row][col] = 0
-        return [] # failure           
+        return [] # failure
+
+    def restore_removed_domains(self, domains, removed):
+        for position in removed:
+            domains[(position)] |= removed[(position)]
 
     def is_assignment_complete(self, assignment):
         is_complete = True
@@ -169,7 +179,7 @@ class Sudoku(object):
 
     # returns a list of allowable values for the specified variable in the current state
     # TODO: (delete before submission) referenced from: https://github.com/WPI-CS4341/CSP
-    def order_domain_values(self, variable, domains, heuristic):
+    def order_domain_values(self, variable, domains, heuristic = None):
 
         if heuristic == self.LCV:
             return self.least_constraining_value(variable, domains)
@@ -275,17 +285,17 @@ class Sudoku(object):
 
     # returns the reduced domains of all variables, where
     # domains are represented as a 9x9 matrix, each cell storing a list of allowable integers
-    def inference(self, state, domains, variable, value, heuristic):
+    def inference(self, state, domains, variable, value, removed, heuristic):
         # defensive programming
         assert (heuristic == self.AC3) or (heuristic == self.FORWARD_CHECKING), \
             "Only AC3 and Forward Checking heuristics are available."
 
         if heuristic == self.AC3:
-            return self.arc_consistency(state, domains)
+            return self.arc_consistency(state, domains, removed)
         elif heuristic == self.FORWARD_CHECKING:
             return self.forward_checking(domains, variable, value)
 
-    def arc_consistency(self, state, domains):
+    def arc_consistency(self, state, domains, removed):
         # initialisation
         deque = collections.deque()
 
@@ -307,8 +317,8 @@ class Sudoku(object):
 
         while deque: # true if not empty
             (X, Y) = deque.popleft()
-            if self.revise(domains, X, Y):
-                if len(domains[(X[0], X[1])]) == 0: return []
+            if self.revise(domains, X, Y, removed):
+                if len(domains[X]) == 0: return []
                 neighbours = self.get_neighbours(X)
                 neighbours.remove(Y)
                 for Z in neighbours:
@@ -317,18 +327,20 @@ class Sudoku(object):
 
 
     # revises domain of X; domain is mutated.
-    def revise(self, domains, X, Y):
+    def revise(self, domains, X, Y, removed):
         revised = False
-        removed = []
-        for x in domains[(X[0], X[1])]:
-            for y in domains[(Y[0], Y[1])]:
-                is_satisfied = reduce(lambda prev, y: prev or x != y, domains[(Y[0], Y[1])], False)
+        # removed = [] # dictionary-set
+
+        for x in set(domains[X]): # copy domains to prevent set changed size during iteration
+            for y in domains[Y]:
+                is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y], False)
                 if not is_satisfied:
-                    removed.append(x)
+                    removed[X].add(x)
+                    domains[X].remove(x)
                     revised = True
 
-        for x in removed: # prevent set from changing size during iteration
-            domains[(X[0], X[1])].remove(x)
+        # for x in removed[X]: # prevent set from changing size during iteration
+        #     domains[X].remove(x)
         return revised
 
     def forward_checking(self, domains, position, value):
