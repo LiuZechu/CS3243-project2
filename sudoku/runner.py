@@ -29,11 +29,10 @@ if os.path.isfile(output_file):
     os.remove(output_file)
 f = open(output_file, "w+")
 
-# start a timer
-start = time.time()
-
 # run program
 print("Running {filename} on input{n}.txt".format(filename=file_name, n=input_num))
+# start a timer
+start = time.time()
 subprocess.call(["python", file_name, input_path, output_file])
 end = time.time()
 print("Completed.\nDuration: {0} seconds".format(round(end-start, 2)))
