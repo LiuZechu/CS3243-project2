@@ -66,12 +66,12 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = unassigned_positions.pop() # variable is a tuple of (row, col)
-        # variable = self.first_unassigned_variable(state)
+        variable = self.most_constrained_variable(state, unassigned_positions, domains)
+        unassigned_positions.remove(variable)
         row = variable[0]
         col = variable[1]
 
-        for value in self.identity_domain(variable, domains):
+        for value in self.least_constraining_value(variable, domains):
             if self.is_value_consistent(value, variable, state):
                 state[row][col] = value # assignment
                 removed = defaultdict(set)
@@ -90,7 +90,7 @@ class Sudoku(object):
                 self.restore_removed_domains(domains, removed)
                 domains[variable] = original_variable_domain
             state[row][col] = 0
-        unassigned_positions.append(variable)
+        unassigned_positions.add(variable)
         return [] # failure
 
     def restore_removed_domains(self, domains, removed):
@@ -106,30 +106,32 @@ class Sudoku(object):
 
         return is_complete
 
-    def first_unassigned_variable(self, state):
-        for row in range(9):
-            for col in range(9):
-                if state[row][col] == 0:
-                    return (row, col)
+    def first_unassigned_variable(self, unassigned_positions):
+        return unassigned_positions.pop()
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
-    def most_constrained_variable(self, state, domains):
+    def most_constrained_variable(self, state, unassigned_positions, domains):
         # initialise
         smallest_domain_size = 10
         position = (0, 0)
 
-        # unassigned_positions = self.get_unassigned_positions(state)
-        # for position in unassigned_positions:
+        for unassigned_position in unassigned_positions:
+            domain_length = len(domains[position])
+            if domain_length < smallest_domain_size:
+                position = unassigned_position
+                smallest_domain_size = domain_length
 
-        for row in range(0, 9):
-            for col in range(0, 9):
-                other_position = (row, col)
-                if state[row][col] == 0:
-                    domain_length = len(domains[(row, col)])
-                    if domain_length < smallest_domain_size:
-                        smallest_domain_size = domain_length
-                        position = other_position
+        return position
+        # for row in range(0, 9):
+        #     for col in range(0, 9):
+        #         other_position = (row, col)
+        #         if state[row][col] == 0:
+        #             domain_length = len(domains[(row, col)])
+        #             if domain_length < smallest_domain_size:
+        #                 smallest_domain_size = domain_length
+        #                 position = other_position
+                    # Tie break with most constraining value
                     # elif domain_length == smallest_domain_size:
                     #     # most constraining variable as tie breaker
                     #     if self.get_degree(state, position) < self.get_degree(state, other_position):
@@ -344,12 +346,12 @@ class Sudoku(object):
         return start_row, start_col
 
     def get_unassigned_positions(self, state):
-        unassigned_positions = []
+        unassigned_positions = set()
         for row in range(9):
             for col in range(9):
                 unassigned_position = (row, col)
                 if state[row][col] == 0:
-                    unassigned_positions.append(unassigned_position)
+                    unassigned_positions.add(unassigned_position)
         return unassigned_positions
 
     def get_state_from_domain(self, domains):

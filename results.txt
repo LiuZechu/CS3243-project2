@@ -1,3 +1,9 @@
+Target
+input_1: 0.38160610199
+input_2: 0.0897970199585
+input_3: 0.0116279125214
+input_4: 0.0186438560486
+
 MCV, MCV, FC:
 19.82
 3.58
@@ -40,12 +46,6 @@ MVC, LCV, AC3:
 0.61
 0.47
 0.47
-
-Target
-input_1: 0.38160610199
-input_2: 0.0897970199585
-input_3: 0.0116279125214
-input_4: 0.0186438560486
 
 Format: Time / # backtracking is called
 Base
