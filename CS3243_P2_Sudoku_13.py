@@ -66,7 +66,7 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.first_unassigned_variable(unassigned_positions)
+        variable = self.most_constrained_variable(state, unassigned_positions, domains)
         row = variable[0]
         col = variable[1]
 
@@ -78,8 +78,8 @@ class Sudoku(object):
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
-                deque = self.make_arc_deque([variable])
-                if self.arc_consistency(deque, domains, removed) != []: # not failure
+                # deque = self.make_arc_deque([variable])
+                if self.forward_checking(domains, variable, value, removed) != []: # not failure
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
@@ -271,54 +271,59 @@ class Sudoku(object):
                 removed[X].add(x)
                 domains[X].remove(x)
                 revised = True
-            # for y in domains[Y]:
         return revised
 
-    def forward_checking(self, domains, position, value):
-        domains = self.reduce_vertical_cells_domains(domains, position, value)
+    def forward_checking(self, domains, position, value, removed):
+        domains = self.reduce_vertical_cells_domains(domains, position, value, removed)
         if domains == []:
             return []
-        domains = self.reduce_horizontal_cells_domains(domains, position, value)
+        domains = self.reduce_horizontal_cells_domains(domains, position, value, removed)
         if domains == []:
             return []
-        domains = self.reduce_small_square_domains(domains, position, value)
+        domains = self.reduce_small_square_domains(domains, position, value, removed)
         if domains == []:
             return []
         else:
             return domains
 
     # remove `value` from all domains of the column of `position`, except at `position` itself
-    def reduce_vertical_cells_domains(self, domains, position, value):
+    def reduce_vertical_cells_domains(self, domains, position, value, removed):
         row_number = position[0]
         column_number = position[1]
         for row in range(0, 9):
-            if row != row_number and value in domains[row][column_number]:
-                domains[(row, column_number)].remove(value)
+            position = (row, column_number)
+            if row != row_number and value in domains[position]:
+                domains[position].remove(value)
+                removed[position].add(value)
                 if domains[(row, column_number)] == []:
                     return [] # failure
         return domains        
 
     # remove `value` from all domains of the row of `position`, except at `position` itself
-    def reduce_horizontal_cells_domains(self, domains, position, value):
+    def reduce_horizontal_cells_domains(self, domains, position, value, removed):
         row_number = position[0]
         column_number = position[1]
         for col in range(0, 9):
-            if col != column_number and value in domains[(row_number, col)]:
-                domains[(row_number, col)].remove(value)
-                if domains[(row_number, col)] == []:
+            position = (row_number, col)
+            if col != column_number and value in domains[position]:
+                domains[position].remove(value)
+                removed[position].add(value)
+                if domains[position] == []:
                     return [] #failure
         return domains
 
     # remove `value` from all domains of cells in the 3x3 square containing `position`, 
     # except at `position` itself
-    def reduce_small_square_domains(self, domains, position, value):
+    def reduce_small_square_domains(self, domains, position, value, removed):
         start_row = (position[0] // 3) * 3
         start_col = (position[1] // 3) * 3
         for row in range(start_row, start_row + 3):
             for col in range(start_col, start_col + 3):
-                if (not (row, col) == position) and value in domains[(row, col)]:
-                    domains[(row, col)].remove(value)
-                    if domains[(row, col)] == []:
+                position = (row, col)
+                if (not (row, col) == position) and value in domains[position]:
+                    domains[position].remove(value)
+                    removed[position].add(value)
+                    if not domains[position]:
                         return [] # failure
         return domains
 
