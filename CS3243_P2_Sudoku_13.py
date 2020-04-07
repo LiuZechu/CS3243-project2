@@ -66,12 +66,11 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.most_constrained_variable(state, unassigned_positions, domains)
-        # unassigned_positions.remove(variable)
+        variable = self.first_unassigned_variable(unassigned_positions)
         row = variable[0]
         col = variable[1]
 
-        for value in self.identity_domain(variable, domains):
+        for value in self.least_constraining_value(variable, domains):
             if self.is_value_consistent(value, variable, state):
                 state[row][col] = value # assignment
                 removed = defaultdict(set)
@@ -162,17 +161,14 @@ class Sudoku(object):
         return domains[variable]
 
     def least_constraining_value(self, variable, domains):
-        # initialise
         neighbours = self.adjacency_dict[variable]  # rows, columns, and small square
         value_count_tuples = []
-        values = domains[variable]
 
-        for value in values:
+        for value in domains[variable]:
             count = 0
             for neighbour in neighbours:
                 if value in domains[neighbour]:
                     count += 1
-                # count += self.count_valid_values(neighbour_domain, value)
             value_count_tuples.append((value, count))
 
         sorted_by_count = sorted(value_count_tuples, key=lambda tup: tup[1])
@@ -242,7 +238,7 @@ class Sudoku(object):
         while deque: # true if not empty
             (X, Y) = deque.popleft()
             if self.revise(domains, X, Y, removed):
-                if len(domains[X]) == 0: return []
+                if not domains[X]: return []
                 # TODO: Understand why this line of code works
                 # NOTE: Next two lines only for binary "!=" constraint
                 # My understanding: Eliminate domains of others only when X has a fixed assignment.
@@ -270,13 +266,12 @@ class Sudoku(object):
     def revise(self, domains, X, Y, removed):
         revised = False
         for x in set(domains[X]): # copy domains to prevent set changed size during iteration
-            for y in domains[Y]:
-                is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y], False)
-                if not is_satisfied:
-                    removed[X].add(x)
-                    domains[X].remove(x)
-                    revised = True
-
+            is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y], False)
+            if not is_satisfied:
+                removed[X].add(x)
+                domains[X].remove(x)
+                revised = True
+            # for y in domains[Y]:
         return revised
 
     def forward_checking(self, domains, position, value):
