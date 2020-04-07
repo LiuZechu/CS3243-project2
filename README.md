@@ -29,6 +29,20 @@ TODO:
 3. Justification for variant
 4. Beat benchmark 
 
+## Variants
+1. AC3 (formally prove that AC3 does well)
+2. AC3 MRV (see effects of MRV)
+3. AC3 LCV (see effects of LCV)
+4. AC3 MRV LCV (see effects of both)
+
+Idea:
+1. Analytically prove that AC3 works
+2. Experimentaly test w/ MRV and LCV. Due to its varying effectiveness 
+(ie MRV is more effective in general/stress tests but not in public test cases; LCV not effective alone) 
+Explain intuitively backed by evidence why one works better in some cases but not so much in others. 
+(eg puzzles which require diff techniques will work well w/ diff heuristics? But in general, the combination of both usually works)
+3. No need to come up with new heuristics - the simple combination will *almost* beat the benchmark already (missed out input1 by 0.3s).
+
 ## Pacman
 TODO
 1. Bug for 1 test case

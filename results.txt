@@ -46,3 +46,39 @@ input_1: 0.38160610199
 input_2: 0.0897970199585
 input_3: 0.0116279125214
 input_4: 0.0186438560486
+
+Format: Time / # backtracking is called
+Base
+AC3
+0.48 (1016)
+0.02
+0.02
+0.01
+
+AC3 + LCV
+3.12 (5994)
+0.03
+0.01
+0.01
+
+AC3 + MRV
+1.1 (2.8k)
+0.04
+0.01
+0.02
+
+AC3 + MRV + LCV
+0.043 (905)
+0.03
+0.01
+0.02
+
+General Test
+AC3: 2.31
+AC3 LCV: 2.82
+AC3 MRV: 1.04
+AC3 MRV LCV: 1.29
+
+Stress Test
+AC3 MRV: 2.93
+AC3 MRV LCV: 3.05

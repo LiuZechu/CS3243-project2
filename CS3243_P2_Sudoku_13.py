@@ -26,9 +26,7 @@ class Sudoku(object):
         # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state))
         domains = self.arc_consistency(deque, domains)
-        if self.backtrack(state, domains, unassigned_positions):
-            self.ans = self.get_state_from_domain(domains)
-
+        self.ans = self.backtrack(state, domains, unassigned_positions)
         print("Backtrack was called {} times".format(self.counter))
 
         # self.ans is a list of lists
@@ -64,12 +62,12 @@ class Sudoku(object):
     # `domains` is a dictionary. Key is position. Value is a set of allowable sudoku values.
     def backtrack(self, state, domains, unassigned_positions):
         self.counter += 1
-        if self.is_assignment_complete(state):
-            return True
+        if not unassigned_positions:
+            return state
 
         # print(state)
-        # variable = unassigned_positions.pop() # variable is a tuple of (row, col)
-        variable = self.first_unassigned_variable(state)
+        variable = unassigned_positions.pop() # variable is a tuple of (row, col)
+        # variable = self.first_unassigned_variable(state)
         row = variable[0]
         col = variable[1]
 
@@ -92,7 +90,7 @@ class Sudoku(object):
                 self.restore_removed_domains(domains, removed)
                 domains[variable] = original_variable_domain
             state[row][col] = 0
-        # unassigned_positions.append(variable)
+        unassigned_positions.append(variable)
         return [] # failure
 
     def restore_removed_domains(self, domains, removed):
@@ -167,9 +165,7 @@ class Sudoku(object):
 
     def identity_domain(self, variable, domains):
         # return its domain
-        row = variable[0]
-        col = variable[1]
-        return domains[(row, col)]
+        return domains[variable]
 
     def least_constraining_value(self, variable, domains):
         # initialise
@@ -253,6 +249,11 @@ class Sudoku(object):
             (X, Y) = deque.popleft()
             if self.revise(domains, X, Y, removed):
                 if len(domains[X]) == 0: return []
+                # TODO: Understand why this line of code works
+                # NOTE: Next two lines only for binary "!=" constraint
+                # My understanding: Eliminate domains of others only when X has a fixed assignment.
+                # Similar to how the deque is initialised with only assigned variables
+                elif len(domains[X]) > 1: continue
                 neighbours = self.adjacency_dict[X]
                 for Z in neighbours:
                     if neighbours != Y: deque.append((Z, X))
