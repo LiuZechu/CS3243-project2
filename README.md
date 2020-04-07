@@ -36,9 +36,12 @@ TODO:
 4. AC3 MRV LCV (see effects of both)
 
 Idea:
-1. Analytically prove that AC3 works
-2. Experimentaly test w/ MRV and LCV. Due to its varying effectiveness 
-(ie MRV is more effective in general/stress tests but not in public test cases; LCV not effective alone) 
+1. Analytically prove that AC3 works (can also show experimentally when you compare AC3 and FC)
+2. Experimentaly test w/ MRV and LCV due to its varying effectiveness 
+(ie MRV is more effective in general/stress tests but not in public test cases; LCV not effective alone)
+> General/Stress tests refer to those in this repository which has implemented the heuristics correctly. Link [here](https://github.com/davidxk/Sudoku-CSP).
+> We can confirm the varying effectiveness of MRV and LCV once our experiment set up is up and running.
+
 Explain intuitively backed by evidence why one works better in some cases but not so much in others. 
 (eg puzzles which require diff techniques will work well w/ diff heuristics? But in general, the combination of both usually works)
 3. No need to come up with new heuristics - the simple combination will *almost* beat the benchmark already (missed out input1 by 0.3s).
