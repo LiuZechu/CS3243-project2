@@ -4,51 +4,35 @@ input_2: 0.0897970199585
 input_3: 0.0116279125214
 input_4: 0.0186438560486
 
-MCV, MCV, FC:
-19.82
-3.58
-1.51
-0.84
-
-MCV, MCV, FC w/ AC3 preprocessing:
-4.34
-0.27
-0.15
-0.17
-
-MCV, LCV, FC:
-22.09
-3.97
-1.52
-0.64
-
-
-MCVariable, MCValue, AC3:
-0.83
-0.61
-0.29
-0.29
-
-DH, MCValue, AC3:
-Didn't test
-25.21
-0.43
-0.5
-
-MCV, LCV, FC:
-19.82
-3.58
-1.51
-0.84
-
-MVC, LCV, AC3:
-38.73
-0.61
-0.47
-0.47
-
+Ours on sunfire
 Format: Time / # backtracking is called
-Base
+
+AC3
+0.76 (1018)
+0.07 (60)
+0.06 (52)
+0.06 (51)
+
+MRV, AC3
+1.51 (2413)
+0.1 (121)
+0.06 (52)
+0.06 (51)
+
+LCV, AC3
+4.41 (5994)
+0.09 (90)
+0.06 (52)
+0.06 (51)
+
+MRV, LCV, AC3
+0.57 (796)
+0.06 (57)
+0.06 (52)
+0.06 (51)
+
+Example Repository
+Format: Time / # backtracking is called
 AC3
 0.48 (1016)
 0.02
@@ -68,10 +52,10 @@ AC3 + MRV
 0.02
 
 AC3 + MRV + LCV
-0.043 (905)
-0.03
-0.01
-0.02
+0.43 (905)
+0.03 (962)
+0.01 (963)
+0.02 (1013)
 
 General Test
 AC3: 2.31

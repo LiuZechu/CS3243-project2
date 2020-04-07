@@ -27,7 +27,7 @@ class Sudoku(object):
         deque = self.make_arc_deque(self.get_assigned_positions(state))
         domains = self.arc_consistency(deque, domains)
         self.ans = self.backtrack(state, domains, unassigned_positions)
-        print("Backtrack was called {} times".format(self.counter))
+        print("Backtrack was called {0} times".format(self.counter))
 
         # self.ans is a list of lists
         return self.ans
@@ -111,7 +111,7 @@ class Sudoku(object):
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
-    def most_constrained_variable(self, state, unassigned_positions, domains):
+    def most_constrained_variable(self, unassigned_positions, domains):
         # initialise
         smallest_domain_size = 10
         index = -1
