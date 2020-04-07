@@ -66,7 +66,7 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.most_constrained_variable(state, unassigned_positions, domains)
+        variable = self.most_constraining_variable(state, unassigned_positions)
         row = variable[0]
         col = variable[1]
 
@@ -78,8 +78,7 @@ class Sudoku(object):
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
-                # deque = self.make_arc_deque([variable])
-                if self.forward_checking(domains, variable, value, removed) != []: # not failure
+                if self.arc_consistency(self.make_arc_deque([variable]), domains, removed) != []: # not failure
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
@@ -129,21 +128,22 @@ class Sudoku(object):
 
         return result
 
-    # returns the unassigned position (row, col) that has the highest degree.
+    # Pops the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
-    def most_constraining_variable(self, state):
-        # initialise
-        position = (-1, -1)
+    def most_constraining_variable(self, state, unassigned_positions):
+        index = -1
         max_degree = -1
 
-        for row in range(9):
-            for col in range(9):
-                if (state[row][col] == 0):
-                    current_degree = self.get_degree(state, (row, col))
-                    if current_degree > max_degree:
-                        position = (row, col)
-                        max_degree = current_degree
-        return position
+        for i in range(len(unassigned_positions)):
+            position = unassigned_positions[i]
+            current_degree = self.get_degree(state, position)
+            if current_degree > max_degree:
+                index = i
+                max_degree = current_degree
+        unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
+        result = unassigned_positions.pop()
+
+        return result
 
     def get_degree(self, state, variable):
         return len(self.get_unassigned_neighbours(state, variable))
