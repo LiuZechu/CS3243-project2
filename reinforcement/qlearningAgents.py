@@ -47,6 +47,7 @@ class QLearningAgent(ReinforcementAgent):
         ## Keys: (state, action)
         ## Value: Float, which are q-values
         self.qValues = util.Counter()
+        self.actionCount = util.Counter()
 
     def getQValue(self, state, action):
         """
@@ -58,8 +59,6 @@ class QLearningAgent(ReinforcementAgent):
 
         qValue = self.qValues[(state, action)]
         return float(qValue)
-
-        util.raiseNotDefined()
 
 
     def computeValueFromQValues(self, state):
@@ -85,8 +84,6 @@ class QLearningAgent(ReinforcementAgent):
           # Return the maximum value in qValueList
           return max(qValueList)
 
-        util.raiseNotDefined()
-
     def computeActionFromQValues(self, state):
         """
           Compute the best action to take in a state.  Note that if there
@@ -97,17 +94,21 @@ class QLearningAgent(ReinforcementAgent):
 
         possible_actions = self.getLegalActions(state)
         action_qValue = {}
-
+        best_action_list = []
+        
         if (len(possible_actions) == 0):
           return None
         else:
           for action in possible_actions:
             action_qValue[action] = self.getQValue(state, action)
           
-          return max(action_qValue, key=action_qValue.get)
-
-        util.raiseNotDefined()
-
+          maxQ = max(action_qValue.values())
+          for action, qValue in action_qValue.items():
+            if (qValue == maxQ):
+              best_action_list.append(action)
+          
+          return random.choice(best_action_list)
+          
     def getAction(self, state):
         """
           Compute the action to take in the current state.  With
@@ -122,18 +123,32 @@ class QLearningAgent(ReinforcementAgent):
         # Pick Action
         legalActions = self.getLegalActions(state)
         action = None
+        totalDeno = 0
+        probability_list = []
         "*** YOUR CODE HERE ***"
 
         if (len(legalActions) == 0):
           return None
-        
+          
         if (util.flipCoin(self.epsilon)):
-          action = random.choice(legalActions)
+
+          for action in legalActions:
+            currQValue = self.getQValue(state, action)
+            currProb = math.exp(self.epsilon * currQValue)
+            totalDeno = totalDeno + currProb
+          
+          for action in legalActions:
+            currQValue = self.getQValue(state, action)
+            currProb = math.exp(self.epsilon * currQValue)
+            prob = (currProb / totalDeno)
+            probability_list.append((prob, action))
+          
+          action = util.chooseFromDistribution(probability_list)
+
         else:
           action = self.computeActionFromQValues(state)
         
         return action
-        util.raiseNotDefined()
 
     def update(self, state, action, nextState, reward):
         """
@@ -149,7 +164,7 @@ class QLearningAgent(ReinforcementAgent):
         q_max = self.computeValueFromQValues(nextState)
 
         # Updating of Q-values
-        self.qValues[(state, action)] = (1 - self.alpha) * self.getQValue(state, action) + self.alpha * (reward + self.discount * q_max)
+        self.qValues[(state, action)] = (1 - self.alpha) * (self.getQValue(state, action)) + self.alpha * (reward + self.discount * q_max)
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
