@@ -1,5 +1,5 @@
 import sys
-import copy
+import time
 from collections import defaultdict
 
 # Running script: given code can be run with the command:
@@ -66,7 +66,7 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.most_constraining_variable(state, unassigned_positions)
+        variable = self.most_constrained_variable(unassigned_positions, domains)
         row = variable[0]
         col = variable[1]
 
@@ -78,7 +78,10 @@ class Sudoku(object):
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
+                ##### Variant 1 - MAC ######
                 if self.arc_consistency(self.make_arc_deque([variable]), domains, removed) != []: # not failure
+                ##### Variant 2 - FC ######
+                # if self.forward_checking(domains, variable, value, removed):
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
@@ -400,8 +403,13 @@ if __name__ == "__main__":
                     i += 1
                     j = 0
 
+    start = time.time()
+
     sudoku = Sudoku(puzzle)
     ans = sudoku.solve()
+
+    end = time.time()
+    print("{0}s".format(end - start))
 
     with open(sys.argv[2], 'a') as f:
         for i in range(9):
