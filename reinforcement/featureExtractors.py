@@ -64,8 +64,6 @@ def closestFood(pos, food, walls):
     return None
 
 class SimpleExtractor(FeatureExtractor):
-
-    ## BASED ON THIS: Average scores ~1100
     """
     Returns simple features for a basic reflex Pacman:
     - whether food will be eaten
@@ -105,84 +103,12 @@ class SimpleExtractor(FeatureExtractor):
         return features
 
 class NewExtractor(FeatureExtractor):
-
-    ## BASED ON THIS: Average Scores: ~1500
     """
     Design you own feature extractor here. You may define other helper functions you find necessary.
     """
-
     def getFeatures(self, state, action):
-        # extract the grid of food and wall locations and get the ghost locations
-        food = state.getFood()
-        walls = state.getWalls()
-        ghosts = state.getGhostPositions()
-        ghostStates = state.getGhostStates()
-        capsules = state.getCapsules()
-
-
-        features = util.Counter()
-
-        features["bias"] = 1.0
-
-        # compute the location of pacman after he takes the action
-        x, y = state.getPacmanPosition()
-        dx, dy = Actions.directionToVector(action)
-        next_x, next_y = int(x + dx), int(y + dy)
-
-        # count the number of ghosts 1-step away
-        features["#-of-ghosts-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(g, walls) for g in ghosts)
-
-        # count the number of capsules 1-step away
-        features["#-of-capsules-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(c, walls) for c in capsules)
-
-        if features["#-of-ghosts-1-step-away"] > 0:   
-            # Obtain the ghost's position that is 1 step away
-            ghostPosition = None
-            for g in ghosts:
-                validNeighbors = Actions.getLegalNeighbors(g, walls)
-                if (next_x, next_y) in validNeighbors:
-                    ghostPosition = g
-                    break
-
-            for gState in ghostStates:
-                # Found the particular ghost
-                if (gState.getPosition() == ghostPosition):
-                    # Check if it's scared
-                    if (gState.scaredTimer > 0):
-                        features["#-of-ghosts-1-step-away"] = features["#-of-ghosts-1-step-away"] - 1
-                        features["eats-ghost"] = 2.0
-
-        else:
-            # if there is no danger of ghosts, prioritise capsules, followed by food
-            if not features["#-of-ghosts-1-step-away"]:
-
-                if features["#-of-capsules-1-step-away"] > 0:
-                    features["eats-capsules"] = 1.0
-                elif (food[next_x][next_y]):
-                    features["eats-food"] = 1.0
-
-
-        # totalScaredTimer = 0
-        # ghostStates = state.getGhostStates()
-        # for g in ghostStates:
-        #     totalScaredTimer += g.scaredTimer
-        # averageScaredTimer = totalScaredTimer/len(ghostStates)
-
-        dist = closestFood((next_x, next_y), food, walls)
-        if dist is not None:
-            # make the distance a number less than one otherwise the update
-            # will diverge wildly
-            features["closest-food"] = float(dist) / (walls.width * walls.height)
-        
-        # features["scared-ghosts"] = averageScaredTimer
-        # if features["scared-ghosts"]:
-        #     features["eats-food"] = 0.0
-        #     features["eats-ghost"] = 3.0
-        #     features["#-of-ghosts-1-step-away"] = 0.5
-
-        features.divideAll(10.0)
-        return features
-    
+        "*** YOUR CODE HERE ***"
+        pass
 
 
         
