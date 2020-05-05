@@ -7,13 +7,14 @@ from collections import defaultdict
 
 import collections
 
+
 class Sudoku(object):
     counter = 0
     adjacency_dict = {}
 
     def __init__(self, puzzle):
         # you may add more attributes if you need
-        self.puzzle = puzzle # self.puzzle is a list of lists
+        self.puzzle = puzzle  # self.puzzle is a list of lists
         # self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
 
     def solve(self):
@@ -24,7 +25,7 @@ class Sudoku(object):
         domains = self.get_initial_domains(state)
 
         # Preprocess domains with AC3
-        deque = self.make_arc_deque(self.get_assigned_positions(state))
+        deque = self.make_arc_deque(self.get_assigned_positions(state), unassigned_positions)
         domains = self.arc_consistency(deque, domains)
         self.ans = self.backtrack(state, domains, unassigned_positions)
         print("Backtrack was called {0} times".format(self.counter))
@@ -72,20 +73,22 @@ class Sudoku(object):
 
         for value in self.least_constraining_value(variable, domains):
             if self.is_value_consistent(value, variable, state):
-                state[row][col] = value # assignment
+                state[row][col] = value  # assignment
                 removed = defaultdict(set)
-                original_variable_domain = domains[variable] # cannot add into `removed` as removed is strictly for inference
+                original_variable_domain = domains[
+                    variable]  # cannot add into `removed` as removed is strictly for inference
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
                 ##### Variant 1 - MAC ######
-                if self.arc_consistency(self.make_arc_deque([variable]), domains, removed) != []: # not failure
-                ##### Variant 2 - FC ######
-                # if self.forward_checking(domains, variable, value, removed):
+                if self.arc_consistency(self.make_arc_deque([variable], unassigned_positions), domains,
+                                        removed):  # not failure
+                    ##### Variant 2 - FC ######
+                    # if self.forward_checking(domains, variable, value, removed):
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
-                    if result != []: # not failure
+                    if result:  # not failure
                         return result
                 # restoring inferences
                 self.restore_removed_domains(domains, removed)
@@ -94,7 +97,7 @@ class Sudoku(object):
 
         assert type(variable) == tuple, "variable must be tuple"
         unassigned_positions.append(variable)
-        return [] # failure
+        return []  # failure
 
     def restore_removed_domains(self, domains, removed):
         for position in removed:
@@ -193,11 +196,10 @@ class Sudoku(object):
 
         for row in range(9):
             for col in range(9):
-                position = (row ,col)
+                position = (row, col)
                 adjacency_dict[position] = self.get_neighbours(position)
 
         return adjacency_dict
-
 
     # returns a list of the variable's neighbours (assigned or not).
     def get_neighbours(self, variable):
@@ -214,8 +216,10 @@ class Sudoku(object):
         start_col = (col // 3) * 3
         for current_row in range(start_row, start_row + 3):
             for current_col in range(start_col, start_col + 3):
-                if (current_col == col or current_row == row): continue # exclude same row and col
-                else: neighbours.append((current_row, current_col))
+                if (current_col == col or current_row == row):
+                    continue  # exclude same row and col
+                else:
+                    neighbours.append((current_row, current_col))
 
         return neighbours
 
@@ -241,43 +245,69 @@ class Sudoku(object):
         start_col = (col // 3) * 3
         for current_row in range(start_row, start_row + 3):
             for current_col in range(start_col, start_col + 3):
-                if current_col == col or current_row == row: continue # exclude same row and col
+                if current_col == col or current_row == row:
+                    continue  # exclude same row and col
                 elif state[current_row][current_col] == value:
                     return False
         return True
 
-    def arc_consistency(self, deque, domains, removed = defaultdict(set)):
-        while deque: # true if not empty
+    def arc_consistency(self, deque, domains, removed=defaultdict(set)):
+        while deque:  # true if not empty
             (X, Y) = deque.popleft()
             if self.revise(domains, X, Y, removed):
-                if not domains[X]: return []
+                if not domains[X]:
+                    return []
                 # TODO: Understand why this line of code works
                 # NOTE: Next two lines only for binary "!=" constraint
                 # My understanding: Eliminate domains of others only when X has a fixed assignment.
                 # Similar to how the deque is initialised with only assigned variables
-                elif len(domains[X]) > 1: continue
+                elif len(domains[X]) > 1:
+                    continue
                 neighbours = self.adjacency_dict[X]
                 for Z in neighbours:
                     if neighbours != Y: deque.append((Z, X))
         return domains
 
-    # Important: The only constraints relevant are the ones FROM the assigned variables to its neighbours
-    # (ie the neighbour's domain will be revised). The assigning of the value to a variable will only limit
-    # it's neighbours' domain.
-    # This criteria is not the same as the constraints from unassigned variables to its neighbours.
-    def make_arc_deque(self, assigned_positions):
+        # Reduces domain set of the variables
+
+    # def AC3_2(self, domain, assigned, cell, value):
+    #
+    #     check_queue = [cell]
+    #     domain[cell] = [value]
+    #     while len(check_queue) is not 0:
+    #         t = check_queue.pop()
+    #         constraints = self.constrainList[t]
+    #         for c in constraints:
+    #             if domain[t][0] in domain[c[1]]:
+    #                 domain[c[1]].remove(domain[t][0])
+    #                 if len(domain[c[1]]) == 0:
+    #                     return [False, domain]
+    #                 if c[1] not in check_queue and len(domain[c[1]]) == 1:
+    #                     check_queue.append(c[1])
+    #     ok = True
+    #     for j in range(len(domain)):
+    #         if (not assigned[j] and len(domain[j]) == 1):
+    #             if (self.is_consistent(domain, assigned, j, domain[j][0])):
+    #                 assigned[j] = True
+    #             else:
+    #                 ok = False
+    # return [ok, domain]
+
+    # Maintaining Arc Consistency
+    def make_arc_deque(self, assigned_positions, unassigned_positions):
         deque = collections.deque()
 
         for position in assigned_positions:
             neighbours = self.adjacency_dict[position]
             for neighbour in neighbours:
-                deque.append((neighbour, position))
+                if neighbour in unassigned_positions:
+                    deque.append((neighbour, position))
         return deque
 
     # revises domain of X; domain is mutated.
     def revise(self, domains, X, Y, removed):
         revised = False
-        for x in set(domains[X]): # copy domains to prevent set changed size during iteration
+        for x in set(domains[X]):  # copy domains to prevent set changed size during iteration
             is_satisfied = reduce(lambda prev, y: prev or x != y, domains[Y], False)
             if not is_satisfied:
                 removed[X].add(x)
@@ -308,10 +338,11 @@ class Sudoku(object):
                 domains[position].remove(value)
                 removed[position].add(value)
                 if domains[(row, column_number)] == []:
-                    return [] # failure
-        return domains        
+                    return []  # failure
+        return domains
 
-    # remove `value` from all domains of the row of `position`, except at `position` itself
+        # remove `value` from all domains of the row of `position`, except at `position` itself
+
     def reduce_horizontal_cells_domains(self, domains, position, value, removed):
         row_number = position[0]
         column_number = position[1]
@@ -321,7 +352,7 @@ class Sudoku(object):
                 domains[position].remove(value)
                 removed[position].add(value)
                 if domains[position] == []:
-                    return [] #failure
+                    return []  # failure
         return domains
 
     # remove `value` from all domains of cells in the 3x3 square containing `position`, 
@@ -336,7 +367,7 @@ class Sudoku(object):
                     domains[position].remove(value)
                     removed[position].add(value)
                     if not domains[position]:
-                        return [] # failure
+                        return []  # failure
         return domains
 
     # UTILS
@@ -387,16 +418,17 @@ class Sudoku(object):
     # Note that our evaluation scripts only call the solve method.
     # Any other methods that you write should be used within the solve() method.
 
+
 if __name__ == "__main__":
     # STRICTLY do NOT modify the code in the main function here
     if len(sys.argv) != 3:
-        print ("\nUsage: python CS3243_P2_Sudoku_XX.py input.txt output.txt\n")
+        print("\nUsage: python CS3243_P2_Sudoku_XX.py input.txt output.txt\n")
         raise ValueError("Wrong number of arguments!")
 
     try:
         f = open(sys.argv[1], 'r')
     except IOError:
-        print ("\nUsage: python CS3243_P2_Sudoku_XX.py input.txt output.txt\n")
+        print("\nUsage: python CS3243_P2_Sudoku_XX.py input.txt output.txt\n")
         raise IOError("Input file not found!")
 
     puzzle = [[0 for i in range(9)] for j in range(9)]
