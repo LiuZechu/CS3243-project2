@@ -26,8 +26,10 @@ class Sudoku(object):
 
         # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state), unassigned_positions)
-        domains = self.arc_consistency(deque, domains)
+        domains = self.mac(deque, domains)
         self.ans = self.backtrack(state, domains, unassigned_positions)
+        assert self.ans != [], "Did not solve puzzle."
+
         print("Backtrack was called {0} times".format(self.counter))
 
         # self.ans is a list of lists
@@ -66,8 +68,8 @@ class Sudoku(object):
         if not unassigned_positions:
             return state
 
-        # print(state)
         variable = self.most_constrained_variable(state, unassigned_positions, domains)
+        # variable = self.first_unassigned_variable(unassigned_positions)
         row = variable[0]
         col = variable[1]
 
@@ -75,16 +77,14 @@ class Sudoku(object):
             if self.is_value_consistent(value, variable, state):
                 state[row][col] = value  # assignment
                 removed = defaultdict(set)
-                original_variable_domain = domains[
-                    variable]  # cannot add into `removed` as removed is strictly for inference
+                original_variable_domain = domains[variable]  # cannot add into `removed` as removed is strictly for inference
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
                 ##### Variant 1 - MAC ######
-                if self.arc_consistency(self.make_arc_deque([variable], unassigned_positions), domains,
-                                        removed):  # not failure
-                    ##### Variant 2 - FC ######
-                    # if self.forward_checking(domains, variable, value, removed):
+                if self.mac(self.make_arc_deque([variable], unassigned_positions), domains, removed):  # not failure
+                ##### Variant 2 - FC ######
+                # if self.forward_checking(domains, variable, value, removed):
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
@@ -251,47 +251,23 @@ class Sudoku(object):
                     return False
         return True
 
-    def arc_consistency(self, deque, domains, removed=defaultdict(set)):
+    def mac(self, deque, domains, removed=defaultdict(set)):
         while deque:  # true if not empty
             (X, Y) = deque.popleft()
-            if self.revise(domains, X, Y, removed):
+            y = next(iter(domains[Y])) # Y is an assigned variable in MAC, thus it has only one value.
+
+            if y in domains[X]:
+                domains[X].remove(y)
+                removed[X].add(y)
+                # add removed
                 if not domains[X]:
                     return []
-                # TODO: Understand why this line of code works
-                # NOTE: Next two lines only for binary "!=" constraint
-                # My understanding: Eliminate domains of others only when X has a fixed assignment.
-                # Similar to how the deque is initialised with only assigned variables
                 elif len(domains[X]) > 1:
                     continue
                 neighbours = self.adjacency_dict[X]
                 for Z in neighbours:
                     if neighbours != Y: deque.append((Z, X))
         return domains
-
-        # Reduces domain set of the variables
-
-    # def AC3_2(self, domain, assigned, cell, value):
-    #
-    #     check_queue = [cell]
-    #     domain[cell] = [value]
-    #     while len(check_queue) is not 0:
-    #         t = check_queue.pop()
-    #         constraints = self.constrainList[t]
-    #         for c in constraints:
-    #             if domain[t][0] in domain[c[1]]:
-    #                 domain[c[1]].remove(domain[t][0])
-    #                 if len(domain[c[1]]) == 0:
-    #                     return [False, domain]
-    #                 if c[1] not in check_queue and len(domain[c[1]]) == 1:
-    #                     check_queue.append(c[1])
-    #     ok = True
-    #     for j in range(len(domain)):
-    #         if (not assigned[j] and len(domain[j]) == 1):
-    #             if (self.is_consistent(domain, assigned, j, domain[j][0])):
-    #                 assigned[j] = True
-    #             else:
-    #                 ok = False
-    # return [ok, domain]
 
     # Maintaining Arc Consistency
     def make_arc_deque(self, assigned_positions, unassigned_positions):
