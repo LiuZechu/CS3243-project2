@@ -1,5 +1,5 @@
 import sys
-import copy
+import time
 from collections import defaultdict
 
 # Running script: given code can be run with the command:
@@ -66,7 +66,7 @@ class Sudoku(object):
             return state
 
         # print(state)
-        variable = self.most_constraining_variable(state, unassigned_positions)
+        variable = self.most_constrained_variable(state, unassigned_positions, domains)
         row = variable[0]
         col = variable[1]
 
@@ -78,7 +78,10 @@ class Sudoku(object):
                 domains[variable] = set([value])
 
                 # `inferences` are reduced domains of variables
+                ##### Variant 1 - MAC ######
                 if self.arc_consistency(self.make_arc_deque([variable]), domains, removed) != []: # not failure
+                ##### Variant 2 - FC ######
+                # if self.forward_checking(domains, variable, value, removed):
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
@@ -111,7 +114,7 @@ class Sudoku(object):
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
-    def most_constrained_variable(self, unassigned_positions, domains):
+    def most_constrained_variable(self, state, unassigned_positions, domains):
         # initialise
         smallest_domain_size = 10
         index = -1
@@ -122,11 +125,19 @@ class Sudoku(object):
             if domain_length < smallest_domain_size:
                 index = i
                 smallest_domain_size = domain_length
+            # elif domain_length == smallest_domain_size:
+            #     assert index >= 0, "Index of unassigned position out of bounds. Check that index is assigned a " \
+            #                       "variable in unassigned positions."
+            #
+            #     index = self.compare_degree(state, index, i)
 
         unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
         result = unassigned_positions.pop()
 
         return result
+
+    def compare_degree(self, state, i, j):
+        return i if self.get_degree(state, i) > self.get_degree(state, j) else j
 
     # Pops the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
@@ -140,6 +151,7 @@ class Sudoku(object):
             if current_degree > max_degree:
                 index = i
                 max_degree = current_degree
+
         unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
         result = unassigned_positions.pop()
 
@@ -400,8 +412,13 @@ if __name__ == "__main__":
                     i += 1
                     j = 0
 
+    start = time.time()
+
     sudoku = Sudoku(puzzle)
     ans = sudoku.solve()
+
+    end = time.time()
+    print("{0}s".format(end - start))
 
     with open(sys.argv[2], 'a') as f:
         for i in range(9):
