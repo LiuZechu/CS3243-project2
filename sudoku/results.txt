@@ -4,65 +4,18 @@ input_2: 0.0897970199585
 input_3: 0.0116279125214
 input_4: 0.0186438560486
 
-Ours on sunfire
 Format: Time / # backtracking is called
 
-AC3
-0.76 (1018)
-0.07 (60)
-0.06 (52)
-0.06 (51)
+Variant 1
+MRV, LCV, MAC
+0.5079 (796)
+0.02270 (57)
+0.02063 (52)
+0.02295 (51)
 
-MRV, AC3
-1.51 (2413)
-0.1 (121)
-0.06 (52)
-0.06 (51)
-
-LCV, AC3
-4.41 (5994)
-0.09 (90)
-0.06 (52)
-0.06 (51)
-
-MRV, LCV, AC3
-0.57 (796)
-0.06 (57)
-0.06 (52)
-0.06 (51)
-
-Example Repository
-Format: Time / # backtracking is called
-AC3
-0.48 (1016)
-0.02
-0.02
-0.01
-
-AC3 + LCV
-3.12 (5994)
-0.03
-0.01
-0.01
-
-AC3 + MRV
-1.1 (2.8k)
-0.04
-0.01
-0.02
-
-AC3 + MRV + LCV
-0.43 (905)
-0.03 (962)
-0.01 (963)
-0.02 (1013)
-
-General Test
-AC3: 2.31
-AC3 LCV: 2.82
-AC3 MRV: 1.04
-AC3 MRV LCV: 1.29
-
-Stress Test
-AC3 MRV: 2.93
-AC3 MRV LCV: 3.05
+Variant 2
+MRV, LCV, FC
+0.7389 (9594)
+0.03190 (310)
+0.01706 (52)
+0.001318 (70)
