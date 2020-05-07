@@ -68,7 +68,7 @@ class Sudoku(object):
         if not unassigned_positions:
             return state
 
-        variable = self.most_constrained_variable(state, unassigned_positions, domains)
+        variable = self.most_constrained_variable(unassigned_positions, domains)
         # variable = self.first_unassigned_variable(unassigned_positions)
         row = variable[0]
         col = variable[1]
@@ -82,9 +82,9 @@ class Sudoku(object):
 
                 # `inferences` are reduced domains of variables
                 ##### Variant 1 - MAC ######
-                # if self.mac(self.make_arc_deque([variable], unassigned_positions), domains, removed):  # not failure
+                if self.mac(self.make_arc_deque([variable], unassigned_positions), domains, removed):  # not failure
                 ##### Variant 2 - FC ######
-                if self.forward_checking(domains, variable, value, removed):
+                # if self.forward_checking(domains, variable, value, removed):
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list
@@ -108,7 +108,7 @@ class Sudoku(object):
 
     # returns the unassigned position (row, col) 
     # that has the fewest allowable values in its domain
-    def most_constrained_variable(self, state, unassigned_positions, domains):
+    def most_constrained_variable(self,  unassigned_positions, domains):
         # initialise
         smallest_domain_size = 10
         result = ()
@@ -229,16 +229,11 @@ class Sudoku(object):
     def mac(self, deque, domains, removed=defaultdict(set)):
         while deque:  # true if not empty
             (X, Y) = deque.popleft()
-            y = next(iter(domains[Y])) # Y is an assigned variable in MAC, thus it has only one value.
 
-            if y in domains[X]:
-                domains[X].remove(y)
-                removed[X].add(y)
+            if self.revise(domains, X, Y, removed):
                 # add removed
                 if len(domains[X]) == 0:
                     return []
-                elif len(domains[X]) > 1:
-                    continue
                 neighbours = self.adjacency_dict[X]
                 for Z in neighbours:
                     if neighbours != Y: deque.append((Z, X))

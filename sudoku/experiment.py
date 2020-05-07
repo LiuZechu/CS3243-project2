@@ -88,7 +88,7 @@ puzzles = read_test_cases_from_file("experiment_inputs_3.csv")
 variant_1_output = "variant_1_output.csv"
 variant_2_output = "variant_2_output.csv"
 variant_3_output = "variant_3_output.csv"
-output_file = variant_2_output
+output_file = variant_3_output
 
 # clean previous outputs
 if os.path.isfile(output_file):
