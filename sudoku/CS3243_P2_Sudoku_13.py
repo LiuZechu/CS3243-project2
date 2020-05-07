@@ -82,9 +82,9 @@ class Sudoku(object):
 
                 # `inferences` are reduced domains of variables
                 ##### Variant 1 - MAC ######
-                if self.mac(self.make_arc_deque([variable], unassigned_positions), domains, removed):  # not failure
+                # if self.mac(self.make_arc_deque([variable], unassigned_positions), domains, removed):  # not failure
                 ##### Variant 2 - FC ######
-                # if self.forward_checking(domains, variable, value, removed):
+                if self.forward_checking(domains, variable, value, removed):
                     result = self.backtrack(state, domains, unassigned_positions)
                     # successful result is a complete assignment
                     # failure is an empty list

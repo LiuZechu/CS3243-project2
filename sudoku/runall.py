@@ -15,4 +15,4 @@ output = "output"
 extension = ".txt"
 
 for i in range(1, 5):
-    subprocess.call(["python", sudoku, input + str(i) + extension, output + str(i) + extension])
+    subprocess.call(["python2", sudoku, input + str(i) + extension, output + str(i) + extension])
