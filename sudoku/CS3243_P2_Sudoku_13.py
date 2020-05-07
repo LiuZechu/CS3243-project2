@@ -22,12 +22,11 @@ class Sudoku(object):
         state = self.puzzle
         self.adjacency_dict = self.get_adjacency_dict(state)
         unassigned_positions = self.get_unassigned_positions(state)
-        domains = self.get_initial_domains(state)
+        domains = self.preprocess_domains(state)
 
         # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state), unassigned_positions)
         domains = self.mac(deque, domains)
-        # removed = defaultdict(set)
         self.ans = self.backtrack(state, domains, unassigned_positions)
         assert self.ans != [], "Did not solve puzzle."
 
@@ -37,7 +36,7 @@ class Sudoku(object):
         return self.ans
 
     # excludes assigned variables
-    def get_initial_domains(self, state):
+    def preprocess_domains(self, state):
         initial_domains = {}
 
         for row in range(9):
@@ -45,7 +44,7 @@ class Sudoku(object):
                 value = state[row][col]
                 if value == 0:
                     # initial_domains[(row, col)] = [state[row][col]]
-                    initial_domains[(row, col)] = set([1, 2, 3, 4, 5, 6, 7, 8, 9])
+                    initial_domains[(row, col)] = set(range(1,10))
                 else:
                     initial_domains[(row, col)] = set([value])
         return initial_domains
