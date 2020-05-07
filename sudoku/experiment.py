@@ -37,24 +37,33 @@ def read_test_cases_from_file(file_name):
                 if j == 9:
                     i += 1
                     j = 0
+            elif number == '.':
+                puzzle[i][j] = 0
+                j += 1
+                if j == 9:
+                    i += 1
+                    j = 0
 
-        # randomely change increasing number of cells to 0
-        # TODO: make sure the resultant puzzle is solvable
-        used_positions = set()
+        if i == 0:
+            continue
 
-        # TODO: change this hard coded part for exp 2
-        if file_name == "experiment_inputs_2.csv":
-            number_of_empty_cells = 60
+        # # randomely change increasing number of cells to 0
+        # # TODO: make sure the resultant puzzle is solvable
+        # used_positions = set()
 
-        for k in range(number_of_empty_cells):
-            row = randrange(9)
-            col = randrange(9)
-            while (row, col) in used_positions:
-                row = randrange(9)
-                col = randrange(9)
-            puzzle[row][col] = 0
-            used_positions.add((row, col))
-        number_of_empty_cells += 1
+        # # TODO: change this hard coded part for exp 2
+        # if file_name == "experiment_inputs_2.csv":
+        #     number_of_empty_cells = 60
+
+        # for k in range(number_of_empty_cells):
+        #     row = randrange(9)
+        #     col = randrange(9)
+        #     while (row, col) in used_positions:
+        #         row = randrange(9)
+        #         col = randrange(9)
+        #     puzzle[row][col] = 0
+        #     used_positions.add((row, col))
+        # number_of_empty_cells += 1
 
         puzzles.append(puzzle)
 
@@ -62,59 +71,38 @@ def read_test_cases_from_file(file_name):
     return puzzles
 
 ###################### UTILITY FUNCTIONS ######################
-# This function returns an array of [time_taken, number_of_backtracking_calls] NO
-# This function returns time_taken
+# This function returns an array of [time_taken, number_of_backtracking_calls]
 def run_and_generate_stats(puzzle):
     start = time.time()
     sudoku = Sudoku(puzzle)
     ans = sudoku.solve()
     end = time.time()
     duration = round(end - start, 6)
-    return duration
+    number_of_backtracking_calls = sudoku.counter
+    return [duration, number_of_backtracking_calls]
 
-############### EXPERIMENT 1: TIME AGAINST SOLUTION DEPTH ###############
-# puzzles = read_test_cases_from_file("experiment_inputs_1.csv")
-
-# # counter = 1
-# # for puzzle in puzzles:
-# #     duration = run_and_generate_stats(puzzle)
-# #     print("solution depth {} takes ".format(counter) + str(duration) + " seconds")
-# #     counter += 1
-
-# ###### Write into a CSV file ######
-# output_file = "experiment_1_output.csv"
-
-# # clean previous outputs
-# if os.path.isfile(output_file):
-#     os.remove(output_file)
-
-# delimiter = ","
-# table_headings = "Numer of Empty Cells,Time Taken\n"
-# with open(output_file, 'w+') as f:
-#     f.write(table_headings)
-#     counter = 1
-#     for puzzle in puzzles:
-#         duration = run_and_generate_stats(puzzle)
-#         f.write(str(counter) + delimiter + str(duration) + "\n")
-#         print("solution depth {} takes ".format(counter) + str(duration) + " seconds")
-#         counter += 1
-
-############### EXPERIMENT 2: HISTOGRAM ###############
-puzzles = read_test_cases_from_file("experiment_inputs_2.csv")
+############### EXPERIMENT ###############
+puzzles = read_test_cases_from_file("experiment_inputs_3.csv")
 
 ###### Write into a CSV file ######
-output_file = "experiment_2_output.csv"
+variant_1_output = "variant_1_output.csv"
+variant_2_output = "variant_2_output.csv"
+variant_3_output = "variant_3_output.csv"
+output_file = variant_3_output
 
 # clean previous outputs
 if os.path.isfile(output_file):
     os.remove(output_file)
 
 delimiter = ","
-table_headings = "Numer of Empty Cells,Time Taken\n"
+table_headings = "Puzzle #,Time Taken,Backtracking Calls\n"
 with open(output_file, 'w+') as f:
+    f.write(table_headings)
     counter = 1
     for puzzle in puzzles:
-        duration = run_and_generate_stats(puzzle)
-        f.write(str(counter) + delimiter + str(duration) + "\n")
-        print("solution depth {} takes ".format(counter) + str(duration) + " seconds")
+        stats = run_and_generate_stats(puzzle)
+        duration = stats[0]
+        number_of_backtracking_calls = stats[1]
+        f.write(str(counter) + delimiter + str(duration) + delimiter + str(number_of_backtracking_calls) + "\n")
+        print("Puzzle {} takes ".format(counter) + str(duration) + " seconds")
         counter += 1

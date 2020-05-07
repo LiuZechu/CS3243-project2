@@ -22,7 +22,7 @@ class Sudoku(object):
         state = self.puzzle
         self.adjacency_dict = self.get_adjacency_dict(state)
         unassigned_positions = self.get_unassigned_positions(state)
-        domains = self.get_initial_domains(state)
+        domains = self.preprocess_domains(state)
 
         # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state), unassigned_positions)
@@ -36,7 +36,7 @@ class Sudoku(object):
         return self.ans
 
     # excludes assigned variables
-    def get_initial_domains(self, state):
+    def preprocess_domains(self, state):
         initial_domains = {}
 
         for row in range(9):
@@ -44,7 +44,7 @@ class Sudoku(object):
                 value = state[row][col]
                 if value == 0:
                     # initial_domains[(row, col)] = [state[row][col]]
-                    initial_domains[(row, col)] = set([1, 2, 3, 4, 5, 6, 7, 8, 9])
+                    initial_domains[(row, col)] = set(range(1,10))
                 else:
                     initial_domains[(row, col)] = set([value])
         return initial_domains
@@ -72,11 +72,11 @@ class Sudoku(object):
         # variable = self.first_unassigned_variable(unassigned_positions)
         row = variable[0]
         col = variable[1]
+        removed = defaultdict(set)
 
         for value in self.least_constraining_value(variable, domains):
             if self.is_value_consistent(value, variable, state):
                 state[row][col] = value  # assignment
-                removed = defaultdict(set)
                 original_variable_domain = domains[variable]  # cannot add into `removed` as removed is strictly for inference
                 domains[variable] = set([value])
 
@@ -96,21 +96,12 @@ class Sudoku(object):
             state[row][col] = 0
 
         assert type(variable) == tuple, "variable must be tuple"
-        unassigned_positions.append(variable)
+        unassigned_positions.add(variable)
         return []  # failure
 
     def restore_removed_domains(self, domains, removed):
         for position in removed:
             domains[position] |= removed[position]
-
-    def is_assignment_complete(self, assignment):
-        is_complete = True
-        for row in range(0, 9):
-            for col in range(0, 9):
-                if assignment[row][col] == 0:
-                    is_complete = False
-
-        return is_complete
 
     def first_unassigned_variable(self, unassigned_positions):
         return unassigned_positions.pop()
@@ -120,56 +111,48 @@ class Sudoku(object):
     def most_constrained_variable(self, state, unassigned_positions, domains):
         # initialise
         smallest_domain_size = 10
-        index = -1
+        result = ()
 
-        for i in range(len(unassigned_positions)):
-            position = unassigned_positions[i]
-            domain_length = len(domains[position])
+        for unassigned_position in unassigned_positions:
+            domain_length = len(domains[unassigned_position])
             if domain_length < smallest_domain_size:
-                index = i
+                result = unassigned_position
                 smallest_domain_size = domain_length
             # elif domain_length == smallest_domain_size:
-            #     assert index >= 0, "Index of unassigned position out of bounds. Check that index is assigned a " \
-            #                       "variable in unassigned positions."
-            #
-            #     index = self.compare_degree(state, index, i)
+            #     result = self.compare_degree(unassigned_position, result, unassigned_positions)
 
-        unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
-        result = unassigned_positions.pop()
-
+        unassigned_positions.remove(result)
         return result
 
-    def compare_degree(self, state, i, j):
-        return i if self.get_degree(state, i) > self.get_degree(state, j) else j
+    def compare_degree(self, x, y, unassigned_positions):
+        if self.get_degree(x, unassigned_positions) < self.get_degree(y, unassigned_positions):
+            return y
+        else:
+            return x
 
     # Pops the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
-    def most_constraining_variable(self, state, unassigned_positions):
-        index = -1
+    def most_constraining_variable(self, unassigned_positions):
+        # initialise
         max_degree = -1
+        result = ()
 
-        for i in range(len(unassigned_positions)):
-            position = unassigned_positions[i]
-            current_degree = self.get_degree(state, position)
+        for unassigned_position in unassigned_positions:
+            current_degree = self.get_degree(unassigned_position, unassigned_positions)
             if current_degree > max_degree:
-                index = i
+                result = unassigned_position
                 max_degree = current_degree
 
-        unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
-        result = unassigned_positions.pop()
-
+        unassigned_positions.remove(result)
         return result
 
-    def get_degree(self, state, variable):
-        return len(self.get_unassigned_neighbours(state, variable))
-
-    def get_unassigned_neighbours(self, state, variable):
-        unassigned_neighbours = []
-        neighbours = self.adjacency_dict[variable]
+    def get_degree(self, position, unassigned_positions):
+        degree = 0
+        neighbours = self.adjacency_dict[position]
         for neighbour in neighbours:
-            if state[neighbour[0]][neighbour[1]] == 0:
-                unassigned_neighbours.append(neighbour)
-        return unassigned_neighbours
+            if neighbour in unassigned_positions:
+                degree += 1
+        return degree
 
     def identity_domain(self, variable, domains):
         # return its domain
@@ -190,7 +173,7 @@ class Sudoku(object):
         result = [value[0] for value in sorted_by_count]
         return result
 
-    # Returns adjacency dictionary of cells (keys) and its neighbours (values)
+    # Returns adjacency dictionary of cells (tuple) with its neighbours (array)
     def get_adjacency_dict(self, state):
         adjacency_dict = defaultdict(list)
 
@@ -216,7 +199,7 @@ class Sudoku(object):
         start_col = (col // 3) * 3
         for current_row in range(start_row, start_row + 3):
             for current_col in range(start_col, start_col + 3):
-                if (current_col == col or current_row == row):
+                if current_col == col or current_row == row:
                     continue  # exclude same row and col
                 else:
                     neighbours.append((current_row, current_col))
@@ -233,23 +216,15 @@ class Sudoku(object):
     # checks whether a variable-value assignment is consistent with the current state
     # position is a tuple (row, col)
     def is_value_consistent(self, value, position, state):
-        (row, col) = position
+        neighbours = self.adjacency_dict[position]
+        result = True
 
-        for i in range(0, 9):
-            if i != row and state[i][col] == value:
-                return False
-            if i != col and state[row][i] == value:
-                return False
+        for neighbour in neighbours:
+            (row, col) = neighbour
+            if state[row][col] == value:
+                result = False
 
-        start_row = (row // 3) * 3
-        start_col = (col // 3) * 3
-        for current_row in range(start_row, start_row + 3):
-            for current_col in range(start_col, start_col + 3):
-                if current_col == col or current_row == row:
-                    continue  # exclude same row and col
-                elif state[current_row][current_col] == value:
-                    return False
-        return True
+        return result
 
     def mac(self, deque, domains, removed=defaultdict(set)):
         while deque:  # true if not empty
@@ -260,7 +235,7 @@ class Sudoku(object):
                 domains[X].remove(y)
                 removed[X].add(y)
                 # add removed
-                if not domains[X]:
+                if len(domains[X]) == 0:
                     return []
                 elif len(domains[X]) > 1:
                     continue
@@ -293,13 +268,13 @@ class Sudoku(object):
 
     def forward_checking(self, domains, position, value, removed):
         domains = self.reduce_vertical_cells_domains(domains, position, value, removed)
-        if domains == []:
+        if not domains:
             return []
         domains = self.reduce_horizontal_cells_domains(domains, position, value, removed)
-        if domains == []:
+        if not domains:
             return []
         domains = self.reduce_small_square_domains(domains, position, value, removed)
-        if domains == []:
+        if not domains:
             return []
         else:
             return domains
@@ -313,7 +288,7 @@ class Sudoku(object):
             if row != row_number and value in domains[position]:
                 domains[position].remove(value)
                 removed[position].add(value)
-                if domains[(row, column_number)] == []:
+                if not domains[(row, column_number)]:
                     return []  # failure
         return domains
 
@@ -327,7 +302,7 @@ class Sudoku(object):
             if col != column_number and value in domains[position]:
                 domains[position].remove(value)
                 removed[position].add(value)
-                if domains[position] == []:
+                if not domains[position]:
                     return []  # failure
         return domains
 
@@ -346,48 +321,14 @@ class Sudoku(object):
                         return []  # failure
         return domains
 
-    # UTILS
-    def create_2D_array(self, row, col):
-        return [[0 for x in range(col)] for y in range(row)]
-
-    def get_start_row_col(self, row, col):
-        start_row = (row // 3) * 3
-        start_col = (col // 3) * 3
-
-        return start_row, start_col
-
     def get_unassigned_positions(self, state):
-        unassigned_positions = []
+        unassigned_positions = set()
         for row in range(9):
             for col in range(9):
                 unassigned_position = (row, col)
                 if state[row][col] == 0:
-                    unassigned_positions.append(unassigned_position)
+                    unassigned_positions.add(unassigned_position)
         return unassigned_positions
-
-    def get_state_from_domain(self, domains):
-        final_state = self.create_2D_array(9, 9)
-
-        for position in domains:
-            (row, col) = position
-            domain = domains[position]
-            assert len(domain) == 1, "size of domain must be 1"
-            final_state[row][col] = domain.pop()
-
-        return final_state
-
-    # Returns a list of tuples which specify 1) which cell wherein x and y differs
-    # 2) elements of x in the cell and 3) elements of y in the cell.
-    # If debug mode is on, prints 1), 2), and 3).
-    def debug_arrays(self, x, y):
-        result = []
-        for i in range(9):
-            for j in range(9):
-                if x[i][j] != y[i][j]:
-                    result.append(((i, j),
-                                   x[i][j],
-                                   y[i][j]))
-        return result
 
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY
