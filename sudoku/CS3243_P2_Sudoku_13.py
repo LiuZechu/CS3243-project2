@@ -27,6 +27,7 @@ class Sudoku(object):
         # Preprocess domains with AC3
         deque = self.make_arc_deque(self.get_assigned_positions(state), unassigned_positions)
         domains = self.mac(deque, domains)
+        # removed = defaultdict(set)
         self.ans = self.backtrack(state, domains, unassigned_positions)
         assert self.ans != [], "Did not solve puzzle."
 
@@ -72,11 +73,11 @@ class Sudoku(object):
         # variable = self.first_unassigned_variable(unassigned_positions)
         row = variable[0]
         col = variable[1]
+        removed = defaultdict(set)
 
         for value in self.least_constraining_value(variable, domains):
             if self.is_value_consistent(value, variable, state):
                 state[row][col] = value  # assignment
-                removed = defaultdict(set)
                 original_variable_domain = domains[variable]  # cannot add into `removed` as removed is strictly for inference
                 domains[variable] = set([value])
 
@@ -118,8 +119,8 @@ class Sudoku(object):
             if domain_length < smallest_domain_size:
                 result = unassigned_position
                 smallest_domain_size = domain_length
-            elif domain_length == smallest_domain_size:
-                result = self.compare_degree(unassigned_position, result, unassigned_positions)
+            # elif domain_length == smallest_domain_size:
+            #     result = self.compare_degree(unassigned_position, result, unassigned_positions)
 
         unassigned_positions.remove(result)
         return result
@@ -173,7 +174,7 @@ class Sudoku(object):
         result = [value[0] for value in sorted_by_count]
         return result
 
-    # Returns adjacency dictionary of cells (keys) and its neighbours (values)
+    # Returns adjacency dictionary of cells (tuple) with its neighbours (array)
     def get_adjacency_dict(self, state):
         adjacency_dict = defaultdict(list)
 
@@ -216,23 +217,15 @@ class Sudoku(object):
     # checks whether a variable-value assignment is consistent with the current state
     # position is a tuple (row, col)
     def is_value_consistent(self, value, position, state):
-        (row, col) = position
+        neighbours = self.adjacency_dict[position]
+        result = True
 
-        for i in range(0, 9):
-            if i != row and state[i][col] == value:
-                return False
-            if i != col and state[row][i] == value:
-                return False
+        for neighbour in neighbours:
+            (row, col) = neighbour
+            if state[row][col] == value:
+                result = False
 
-        start_row = (row // 3) * 3
-        start_col = (col // 3) * 3
-        for current_row in range(start_row, start_row + 3):
-            for current_col in range(start_col, start_col + 3):
-                if current_col == col or current_row == row:
-                    continue  # exclude same row and col
-                elif state[current_row][current_col] == value:
-                    return False
-        return True
+        return result
 
     def mac(self, deque, domains, removed=defaultdict(set)):
         while deque:  # true if not empty
@@ -243,7 +236,7 @@ class Sudoku(object):
                 domains[X].remove(y)
                 removed[X].add(y)
                 # add removed
-                if not domains[X]:
+                if len(domains[X]) == 0:
                     return []
                 elif len(domains[X]) > 1:
                     continue
@@ -276,13 +269,13 @@ class Sudoku(object):
 
     def forward_checking(self, domains, position, value, removed):
         domains = self.reduce_vertical_cells_domains(domains, position, value, removed)
-        if domains == []:
+        if not domains:
             return []
         domains = self.reduce_horizontal_cells_domains(domains, position, value, removed)
-        if domains == []:
+        if not domains:
             return []
         domains = self.reduce_small_square_domains(domains, position, value, removed)
-        if domains == []:
+        if not domains:
             return []
         else:
             return domains
@@ -296,7 +289,7 @@ class Sudoku(object):
             if row != row_number and value in domains[position]:
                 domains[position].remove(value)
                 removed[position].add(value)
-                if domains[(row, column_number)] == []:
+                if not domains[(row, column_number)]:
                     return []  # failure
         return domains
 
@@ -310,7 +303,7 @@ class Sudoku(object):
             if col != column_number and value in domains[position]:
                 domains[position].remove(value)
                 removed[position].add(value)
-                if domains[position] == []:
+                if not domains[position]:
                     return []  # failure
         return domains
 
@@ -329,16 +322,6 @@ class Sudoku(object):
                         return []  # failure
         return domains
 
-    # UTILS
-    def create_2D_array(self, row, col):
-        return [[0 for x in range(col)] for y in range(row)]
-
-    def get_start_row_col(self, row, col):
-        start_row = (row // 3) * 3
-        start_col = (col // 3) * 3
-
-        return start_row, start_col
-
     def get_unassigned_positions(self, state):
         unassigned_positions = set()
         for row in range(9):
@@ -347,30 +330,6 @@ class Sudoku(object):
                 if state[row][col] == 0:
                     unassigned_positions.add(unassigned_position)
         return unassigned_positions
-
-    def get_state_from_domain(self, domains):
-        final_state = self.create_2D_array(9, 9)
-
-        for position in domains:
-            (row, col) = position
-            domain = domains[position]
-            assert len(domain) == 1, "size of domain must be 1"
-            final_state[row][col] = domain.pop()
-
-        return final_state
-
-    # Returns a list of tuples which specify 1) which cell wherein x and y differs
-    # 2) elements of x in the cell and 3) elements of y in the cell.
-    # If debug mode is on, prints 1), 2), and 3).
-    def debug_arrays(self, x, y):
-        result = []
-        for i in range(9):
-            for j in range(9):
-                if x[i][j] != y[i][j]:
-                    result.append(((i, j),
-                                   x[i][j],
-                                   y[i][j]))
-        return result
 
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY

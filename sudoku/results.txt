@@ -9,13 +9,13 @@ Format: Time / # backtracking is called
 Variant 1
 MRV, LCV, MAC
 Backtrack was called 1097 times
-0.27782201767s
+0.268524169922s
 Backtrack was called 57 times
-0.00988698005676s
+0.00936603546143s
 Backtrack was called 52 times
-0.00754594802856s
+0.00723385810852s
 Backtrack was called 51 times
-0.0082540512085s
+0.00789785385132s
 
 Variant 2
 MRV, LCV, FC
