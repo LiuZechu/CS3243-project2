@@ -96,21 +96,12 @@ class Sudoku(object):
             state[row][col] = 0
 
         assert type(variable) == tuple, "variable must be tuple"
-        unassigned_positions.append(variable)
+        unassigned_positions.add(variable)
         return []  # failure
 
     def restore_removed_domains(self, domains, removed):
         for position in removed:
             domains[position] |= removed[position]
-
-    def is_assignment_complete(self, assignment):
-        is_complete = True
-        for row in range(0, 9):
-            for col in range(0, 9):
-                if assignment[row][col] == 0:
-                    is_complete = False
-
-        return is_complete
 
     def first_unassigned_variable(self, unassigned_positions):
         return unassigned_positions.pop()
@@ -120,56 +111,48 @@ class Sudoku(object):
     def most_constrained_variable(self, state, unassigned_positions, domains):
         # initialise
         smallest_domain_size = 10
-        index = -1
+        result = ()
 
-        for i in range(len(unassigned_positions)):
-            position = unassigned_positions[i]
-            domain_length = len(domains[position])
+        for unassigned_position in unassigned_positions:
+            domain_length = len(domains[unassigned_position])
             if domain_length < smallest_domain_size:
-                index = i
+                result = unassigned_position
                 smallest_domain_size = domain_length
-            # elif domain_length == smallest_domain_size:
-            #     assert index >= 0, "Index of unassigned position out of bounds. Check that index is assigned a " \
-            #                       "variable in unassigned positions."
-            #
-            #     index = self.compare_degree(state, index, i)
+            elif domain_length == smallest_domain_size:
+                result = self.compare_degree(unassigned_position, result, unassigned_positions)
 
-        unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
-        result = unassigned_positions.pop()
-
+        unassigned_positions.remove(result)
         return result
 
-    def compare_degree(self, state, i, j):
-        return i if self.get_degree(state, i) > self.get_degree(state, j) else j
+    def compare_degree(self, x, y, unassigned_positions):
+        if self.get_degree(x, unassigned_positions) < self.get_degree(y, unassigned_positions):
+            return y
+        else:
+            return x
 
     # Pops the unassigned position (row, col) that has the highest degree.
     # Intuitively, such a tile has the most empty tiles in its row, column, and small square.
-    def most_constraining_variable(self, state, unassigned_positions):
-        index = -1
+    def most_constraining_variable(self, unassigned_positions):
+        # initialise
         max_degree = -1
+        result = ()
 
-        for i in range(len(unassigned_positions)):
-            position = unassigned_positions[i]
-            current_degree = self.get_degree(state, position)
+        for unassigned_position in unassigned_positions:
+            current_degree = self.get_degree(unassigned_position, unassigned_positions)
             if current_degree > max_degree:
-                index = i
+                result = unassigned_position
                 max_degree = current_degree
 
-        unassigned_positions[index], unassigned_positions[-1] = unassigned_positions[-1], unassigned_positions[index]
-        result = unassigned_positions.pop()
-
+        unassigned_positions.remove(result)
         return result
 
-    def get_degree(self, state, variable):
-        return len(self.get_unassigned_neighbours(state, variable))
-
-    def get_unassigned_neighbours(self, state, variable):
-        unassigned_neighbours = []
-        neighbours = self.adjacency_dict[variable]
+    def get_degree(self, position, unassigned_positions):
+        degree = 0
+        neighbours = self.adjacency_dict[position]
         for neighbour in neighbours:
-            if state[neighbour[0]][neighbour[1]] == 0:
-                unassigned_neighbours.append(neighbour)
-        return unassigned_neighbours
+            if neighbour in unassigned_positions:
+                degree += 1
+        return degree
 
     def identity_domain(self, variable, domains):
         # return its domain
@@ -216,7 +199,7 @@ class Sudoku(object):
         start_col = (col // 3) * 3
         for current_row in range(start_row, start_row + 3):
             for current_col in range(start_col, start_col + 3):
-                if (current_col == col or current_row == row):
+                if current_col == col or current_row == row:
                     continue  # exclude same row and col
                 else:
                     neighbours.append((current_row, current_col))
@@ -357,12 +340,12 @@ class Sudoku(object):
         return start_row, start_col
 
     def get_unassigned_positions(self, state):
-        unassigned_positions = []
+        unassigned_positions = set()
         for row in range(9):
             for col in range(9):
                 unassigned_position = (row, col)
                 if state[row][col] == 0:
-                    unassigned_positions.append(unassigned_position)
+                    unassigned_positions.add(unassigned_position)
         return unassigned_positions
 
     def get_state_from_domain(self, domains):
