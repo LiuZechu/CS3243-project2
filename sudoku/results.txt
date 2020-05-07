@@ -7,33 +7,34 @@ input_4: 0.0186438560486
 Format: Time / # backtracking is called
 
 Variant 1
-MRV, LCV, MAC
+MAC
 Backtrack was called 1097 times
-0.268524169922s
+1.84787607193s
 Backtrack was called 57 times
-0.00936603546143s
+0.0379610061646s
 Backtrack was called 52 times
-0.00723385810852s
+0.00873613357544s
 Backtrack was called 51 times
-0.00789785385132s
+0.0219049453735s
 
 Variant 2
-MRV, LCV, FC
+FC
 Backtrack was called 3459 times
-0.193845033646s
+0.190262079239s
 Backtrack was called 119 times
-0.00853705406189s
+0.00863409042358s
 Backtrack was called 52 times
-0.00684189796448s
+0.00689697265625s
 Backtrack was called 59 times
-0.0054988861084s
+0.00552296638489s
 
-Variant 1 w/ degree heuristic tie breaker
-Backtrack was called 1426 times
-0.990713119507s
-Backtrack was called 138 times
-0.0860159397125s
+Variant 3
+FC singleton
+Backtrack was called 1097 times
+0.267496824265s
+Backtrack was called 57 times
+0.00955891609192s
 Backtrack was called 52 times
-0.0250949859619s
+0.00740098953247s
 Backtrack was called 51 times
-0.0278968811035s
+0.0080509185791s
