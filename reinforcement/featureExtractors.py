@@ -136,7 +136,7 @@ class NewExtractor(FeatureExtractor):
         features["#-of-capsules-1-step-away"] = sum((next_x, next_y) in Actions.getLegalNeighbors(c, walls) for c in capsules)
 
         if features["#-of-ghosts-1-step-away"] > 0:   
-            # Obtain the ghost's position that is 1 step away
+            # Get ghost's position that is 1 step away
             ghostPosition = None
             for g in ghosts:
                 validNeighbors = Actions.getLegalNeighbors(g, walls)
