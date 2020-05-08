@@ -145,17 +145,19 @@ class NewExtractor(FeatureExtractor):
                     break
 
             for gState in ghostStates:
+                print(gState)
                 # Found the particular ghost
                 if (gState.getPosition() == ghostPosition):
                     # Check if it's scared
                     if (gState.scaredTimer > 0):
                         features["#-of-ghosts-1-step-away"] = features["#-of-ghosts-1-step-away"] - 1
-                        features["eats-ghost"] = 2.0
+                        features["eats-ghost"] = 5.0
+                    else:
+                        features["eats-ghost"] = 0
 
         else:
             # if there is no danger of ghosts, prioritise capsules, followed by food
-            if not features["#-of-ghosts-1-step-away"]:
-
+            if features["#-of-ghosts-1-step-away"] == 0:
                 if features["#-of-capsules-1-step-away"] > 0:
                     features["eats-capsules"] = 1.0
                 elif (food[next_x][next_y]):
