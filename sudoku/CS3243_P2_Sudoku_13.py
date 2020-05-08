@@ -1,5 +1,6 @@
 import sys
 import time
+import copy
 from collections import defaultdict
 
 # Running script: given code can be run with the command:
@@ -15,7 +16,7 @@ class Sudoku(object):
     def __init__(self, puzzle):
         # you may add more attributes if you need
         self.puzzle = puzzle  # self.puzzle is a list of lists
-        # self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
+        self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
 
     def solve(self):
         # TODO: Write your code here
@@ -30,8 +31,6 @@ class Sudoku(object):
         self.ans = self.backtrack(state, domains, unassigned_positions)
         assert self.ans != [], "Did not solve puzzle."
 
-        print("Backtrack was called {0} times".format(self.counter))
-
         # self.ans is a list of lists
         return self.ans
 
@@ -43,7 +42,6 @@ class Sudoku(object):
             for col in range(9):
                 value = state[row][col]
                 if value == 0:
-                    # initial_domains[(row, col)] = [state[row][col]]
                     initial_domains[(row, col)] = set(range(1,10))
                 else:
                     initial_domains[(row, col)] = set([value])
@@ -69,7 +67,6 @@ class Sudoku(object):
             return state
 
         variable = self.most_constrained_variable(unassigned_positions, domains)
-        # variable = self.first_unassigned_variable(unassigned_positions)
         row = variable[0]
         col = variable[1]
         removed = defaultdict(set)
@@ -331,13 +328,8 @@ if __name__ == "__main__":
                     i += 1
                     j = 0
 
-    start = time.time()
-
     sudoku = Sudoku(puzzle)
     ans = sudoku.solve()
-
-    end = time.time()
-    print("{0}s".format(end - start))
 
     with open(sys.argv[2], 'a') as f:
         for i in range(9):
