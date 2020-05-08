@@ -10,12 +10,12 @@ import collections
 
 
 class Sudoku(object):
-    adjacency_dict = {}
 
     def __init__(self, puzzle):
         # you may add more attributes if you need
         self.puzzle = puzzle  # self.puzzle is a list of lists
         self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
+        self.adjacency_dict = {}
 
     def solve(self):
         # TODO: Write your code here
