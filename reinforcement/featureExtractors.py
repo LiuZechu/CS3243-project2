@@ -145,7 +145,6 @@ class NewExtractor(FeatureExtractor):
                     break
 
             for gState in ghostStates:
-                print(gState)
                 # Found the particular ghost
                 if (gState.getPosition() == ghostPosition):
                     # Check if it's scared
