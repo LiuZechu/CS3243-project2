@@ -10,7 +10,6 @@ import collections
 
 
 class Sudoku(object):
-    counter = 0
     adjacency_dict = {}
 
     def __init__(self, puzzle):
@@ -62,7 +61,6 @@ class Sudoku(object):
     # `assignment` is the same as state, as it is represented as a 9x9 2D matrix
     # `domains` is a dictionary. Key is position. Value is a set of allowable sudoku values.
     def backtrack(self, state, domains, unassigned_positions):
-        self.counter += 1
         if not unassigned_positions:
             return state
 
@@ -328,8 +326,13 @@ if __name__ == "__main__":
                     i += 1
                     j = 0
 
+    # start = time.time()
+
     sudoku = Sudoku(puzzle)
     ans = sudoku.solve()
+
+    # end = time.time()
+    # print("{0}s".format(end - start))
 
     with open(sys.argv[2], 'a') as f:
         for i in range(9):
