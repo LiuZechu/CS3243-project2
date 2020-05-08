@@ -150,7 +150,7 @@ class NewExtractor(FeatureExtractor):
                     # Check if it's scared
                     if (gState.scaredTimer > 0):
                         features["#-of-ghosts-1-step-away"] = features["#-of-ghosts-1-step-away"] - 1
-                        features["eats-ghost"] = 5.0
+                        features["eats-ghost"] = 2.0
                     else:
                         features["eats-ghost"] = 0
 
